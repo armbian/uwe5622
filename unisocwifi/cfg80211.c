@@ -394,7 +394,7 @@ int sprdwl_init_fw(struct sprdwl_vif *vif)
 	struct sprdwl_priv *priv = vif->priv;
 	enum nl80211_iftype type = vif->wdev.iftype;
 	enum sprdwl_mode mode;
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 19, 0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 17, 0)
 	u8 mac[ETH_ALEN];
 #else
 	u8 *mac;
@@ -430,7 +430,7 @@ int sprdwl_init_fw(struct sprdwl_vif *vif)
 	}
 
 	vif->mode = mode;
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 19, 0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 17, 0)
 	if (!vif->ndev)
 		ether_addr_copy(mac, vif->wdev.address);
 	else
