@@ -22,7 +22,6 @@
 #include <linux/wait.h>
 #include <linux/spinlock.h>
 #include <linux/workqueue.h>
-#include <linux/cpufreq.h>
 #include "wl_core.h"
 #include <wcn_bus.h>
 
@@ -55,9 +54,6 @@
 #define DEL_LUT_INDEX 0
 #define ADD_LUT_INDEX 1
 #define UPD_LUT_INDEX 2
-
-#define BOOST_TXNUM_LEVEL	16
-#define BOOST_RXNUM_LEVEL	16
 
 #ifdef SPRDWL_TX_SELF
 #include <linux/wakelock.h>
@@ -294,9 +290,4 @@ int sprdwl_add_topop_list(int chn, struct mbuf_t *head,
 				struct mbuf_t *tail, int num);
 enum sprdwl_hw_type get_hwintf_type(void);
 void set_coex_bt_on_off(u8 action);
-int sprdwl_notifier_boost(struct notifier_block *nb, unsigned long event, void *data);
-void sprdwl_boost(void);
-void sprdwl_unboost(void);
-void adjust_txnum_level(char *buf, unsigned char offset);
-void adjust_rxnum_level(char *buf, unsigned char offset);
 #endif /* __SPRDWL_INTF_SDIO_SC2355_H__ */

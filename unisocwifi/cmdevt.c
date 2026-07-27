@@ -3243,10 +3243,6 @@ int sprdwl_fw_power_down_ack(struct sprdwl_priv *priv, u8 ctx_id)
 
 	ret =  sprdwl_cmd_send_recv(priv, msg, CMD_WAIT_TIMEOUT, NULL, NULL);
 
-	if (intf->fw_power_down == 1) {
-		sprdwl_unboost();
-	}
-
 	if (ret)
 		wl_err("host send data cmd failed, ret=%d\n", ret);
 
