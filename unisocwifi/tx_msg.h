@@ -86,9 +86,6 @@ struct sprdwl_tx_msg {
 	struct sprdwl_msg_list tx_list_qos_pool;
 	struct sprdwl_xmit_msg_list xmit_msg_list;
 	struct tx_t *tx_list[SPRDWL_MODE_MAX];
-	unsigned long tx_data_num;
-	ktime_t txtimebegin;
-	ktime_t txtimeend;
 
 	struct completion tx_completed;
 };

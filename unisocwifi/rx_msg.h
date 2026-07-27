@@ -61,9 +61,6 @@ struct sprdwl_rx_if {
 	struct work_struct rx_net_work;
 	struct workqueue_struct *rx_net_workq;
 #endif
-	unsigned long rx_data_num;
-	ktime_t rxtimebegin;
-	ktime_t rxtimeend;
 };
 
 struct sprdwl_addr_trans_value {
