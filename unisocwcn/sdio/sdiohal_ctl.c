@@ -422,7 +422,7 @@ static void sdiohal_tx_send(int chn)
 
 }
 
-int sdiohal_tx_muti_channel_pop(int channel, struct mbuf_t *head,
+static int sdiohal_tx_muti_channel_pop(int channel, struct mbuf_t *head,
 		   struct mbuf_t *tail, int num)
 {
 	struct mbuf_t *mbuf_node;
@@ -485,7 +485,7 @@ static void sdiohal_tx_test_init(void)
 	}
 }
 
-int sdiohal_rx_muti_channel_pop(int channel, struct mbuf_t *head,
+static int sdiohal_rx_muti_channel_pop(int channel, struct mbuf_t *head,
 		   struct mbuf_t *tail, int num)
 {
 	int i;
@@ -527,7 +527,7 @@ static void sdiohal_rx_test_init(void)
 	}
 }
 
-int at_list_tx_pop(int channel, struct mbuf_t *head,
+static int at_list_tx_pop(int channel, struct mbuf_t *head,
 		   struct mbuf_t *tail, int num)
 {
 	struct mbuf_t *mbuf_node;
@@ -556,7 +556,7 @@ int at_list_tx_pop(int channel, struct mbuf_t *head,
 }
 
 int tp_rx_cnt;
-int at_list_rx_pop(int channel, struct mbuf_t *head,
+static int at_list_rx_pop(int channel, struct mbuf_t *head,
 		   struct mbuf_t *tail, int num)
 {
 	ktime_t times_count;

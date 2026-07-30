@@ -20,6 +20,7 @@
 #include <linux/io.h>
 
 #include <wcn_bus.h>
+#include "bus_common.h"
 
 struct buffer_pool_t {
 	int size;

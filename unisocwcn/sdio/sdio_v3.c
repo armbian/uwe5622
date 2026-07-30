@@ -8,12 +8,12 @@ static int sdio_get_hif_type(void)
 	return HW_TYPE_SDIO;
 }
 
-int sdiohal_driver_register(void)
+static int sdiohal_driver_register(void)
 {
 	return 0;
 }
 
-void sdiohal_driver_unregister(void)
+static void sdiohal_driver_unregister(void)
 {
 
 }

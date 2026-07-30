@@ -182,7 +182,7 @@ void sdiohal_rx_up(void)
 	complete(&p_data->rx_completed);
 }
 
-void sdiohal_completion_init(void)
+static void sdiohal_completion_init(void)
 {
 	struct sdiohal_data_t *p_data = sdiohal_get_data();
 
@@ -253,7 +253,7 @@ void sdiohal_unlock_scan_ws(void)
 	__pm_relax(p_data->scan_ws);
 }
 
-void sdiohal_wakelock_init(void)
+static void sdiohal_wakelock_init(void)
 {
 	struct sdiohal_data_t *p_data = sdiohal_get_data();
 #if LINUX_VERSION_CODE < KERNEL_VERSION(6, 16, 0)
@@ -267,7 +267,7 @@ void sdiohal_wakelock_init(void)
 #endif
 }
 
-void sdiohal_wakelock_deinit(void)
+static void sdiohal_wakelock_deinit(void)
 {
 	struct sdiohal_data_t *p_data = sdiohal_get_data();
 	/*wakeup_source pointer*/
@@ -292,7 +292,7 @@ void sdiohal_callback_unlock(struct mutex *callback_mutex)
 	mutex_unlock(callback_mutex);
 }
 
-void sdiohal_callback_lock_init(void)
+static void sdiohal_callback_lock_init(void)
 {
 	struct sdiohal_data_t *p_data = sdiohal_get_data();
 	struct mutex *chn_callback = p_data->callback_lock;
@@ -302,7 +302,7 @@ void sdiohal_callback_lock_init(void)
 		mutex_init(&chn_callback[channel]);
 }
 
-void sdiohal_callback_lock_deinit(void)
+static void sdiohal_callback_lock_deinit(void)
 {
 	struct sdiohal_data_t *p_data = sdiohal_get_data();
 	struct mutex *chn_callback = p_data->callback_lock;
@@ -312,7 +312,7 @@ void sdiohal_callback_lock_deinit(void)
 		mutex_destroy(&chn_callback[channel]);
 }
 
-void sdiohal_spinlock_init(void)
+static void sdiohal_spinlock_init(void)
 {
 	struct sdiohal_data_t *p_data = sdiohal_get_data();
 
@@ -432,7 +432,7 @@ void sdiohal_sdma_leave(void)
 	mutex_unlock(&p_data->xmit_sdma);
 }
 
-void sdiohal_mutex_init(void)
+static void sdiohal_mutex_init(void)
 {
 	struct sdiohal_data_t *p_data = sdiohal_get_data();
 
@@ -440,7 +440,7 @@ void sdiohal_mutex_init(void)
 	mutex_init(&p_data->xmit_sdma);
 }
 
-void sdiohal_mutex_deinit(void)
+static void sdiohal_mutex_deinit(void)
 {
 	struct sdiohal_data_t *p_data = sdiohal_get_data();
 
@@ -448,7 +448,7 @@ void sdiohal_mutex_deinit(void)
 	mutex_destroy(&p_data->xmit_sdma);
 }
 
-void sdiohal_sleep_flag_init(void)
+static void sdiohal_sleep_flag_init(void)
 {
 	struct sdiohal_data_t *p_data = sdiohal_get_data();
 

@@ -16,4 +16,9 @@ void wakeup_loopcheck_int(void);
 void loopcheck_first_boot_clear(void);
 void loopcheck_first_boot_set(void);
 int prepare_free_buf(int chn, int size, int num);
+/* -Wmissing-prototypes: cross-file declarations */
+int mdbg_assert_read(int channel, struct mbuf_t *head, struct mbuf_t *tail, int num);
+int mdbg_at_cmd_read(int channel, struct mbuf_t *head, struct mbuf_t *tail, int num);
+int mdbg_loopcheck_read(int channel, struct mbuf_t *head, struct mbuf_t *tail, int num);
+
 #endif

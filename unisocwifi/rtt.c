@@ -614,7 +614,7 @@ out:
 	mutex_unlock(&priv->ftm.lock);
 }
 
-void sprdwl_ftm_event_per_dest_res(struct sprdwl_priv *priv,
+static void sprdwl_ftm_event_per_dest_res(struct sprdwl_priv *priv,
 				   struct ftm_per_dest_res *res)
 {
 	u32 i, index;

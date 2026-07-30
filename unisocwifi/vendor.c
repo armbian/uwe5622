@@ -399,7 +399,7 @@ out_put_fail:
 	return -EMSGSIZE;
 }
 
-void calc_radio_dif(struct sprdwl_llstat_radio *dif_radio,
+static void calc_radio_dif(struct sprdwl_llstat_radio *dif_radio,
 		    struct sprdwl_llstat_data *llst,
 			struct sprdwl_llstat_radio *pre_radio)
 {

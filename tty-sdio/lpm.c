@@ -13,6 +13,7 @@
 #include <linux/export.h>
 #include <linux/device.h>
 #include <marlin_platform.h>
+#include "lpm.h"
 
 #define VERSION         "marlin2 V0.1"
 #define PROC_DIR        "bluetooth/sleep"
@@ -28,7 +29,7 @@ struct proc_dir_entry *bluetooth_dir, *sleep_dir;
 struct wakeup_source *tx_ws;
 struct wakeup_source *rx_ws;
 
-void host_wakeup_bt(void)
+static void host_wakeup_bt(void)
 {
 	__pm_stay_awake(tx_ws);
 	marlin_set_sleep(MARLIN_BLUETOOTH, FALSE);

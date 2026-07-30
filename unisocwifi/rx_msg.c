@@ -28,14 +28,14 @@
 #include "tcp_ack.h"
 
 #ifdef RX_HW_CSUM
-bool mh_ipv6_ext_hdr(unsigned char nexthdr)
+static bool mh_ipv6_ext_hdr(unsigned char nexthdr)
 {
 	return (nexthdr == NEXTHDR_HOP) ||
 	       (nexthdr == NEXTHDR_ROUTING) ||
 	       (nexthdr == NEXTHDR_DEST);
 }
 
-int ipv6_csum(void *data, __wsum csum)
+static int ipv6_csum(void *data, __wsum csum)
 {
 	int ret = 0;
 	struct rx_msdu_desc *msdu_desc = (struct rx_msdu_desc *)data;
@@ -189,7 +189,7 @@ sprdwl_rx_mh_addr_process(struct sprdwl_rx_if *rx_if, void *data,
 }
 
 #ifdef SPLIT_STACK
-void sprdwl_rx_net_work_queue(struct work_struct *work)
+static void sprdwl_rx_net_work_queue(struct work_struct *work)
 {
 	struct sprdwl_rx_if *rx_if;
 	struct sprdwl_priv *priv;

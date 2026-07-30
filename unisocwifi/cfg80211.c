@@ -514,7 +514,7 @@ static inline int sprdwl_is_valid_iftype(struct wiphy *wiphy,
 	return wiphy->interface_modes & BIT(type);
 }
 
-int sprdwl_check_p2p_coex(struct sprdwl_priv *priv)
+static int sprdwl_check_p2p_coex(struct sprdwl_priv *priv)
 {
 	if (mode_to_vif(priv, SPRDWL_MODE_P2P_CLIENT) ||
 		mode_to_vif(priv, SPRDWL_MODE_P2P_GO))
@@ -2008,7 +2008,7 @@ static int sprdwl_cfg80211_sched_scan_stop(struct wiphy *wiphy,
 }
 
 #ifdef SYNC_DISCONNECT
-void sprdwl_disconnect_handle(struct sprdwl_vif *vif)
+static void sprdwl_disconnect_handle(struct sprdwl_vif *vif)
 {
 	vif->sm_state = SPRDWL_DISCONNECTED;
 
@@ -2411,7 +2411,7 @@ void sprdwl_report_fake_probe(struct wiphy *wiphy, u8 *ie, size_t ielen)
 	}
 }
 
-void signal_level_enhance(struct sprdwl_vif *vif,
+static void signal_level_enhance(struct sprdwl_vif *vif,
 			  struct ieee80211_mgmt *mgmt, s32 *signal)
 {
 	struct scan_result *scan_node;
@@ -3293,7 +3293,7 @@ void sprdwl_report_tdls(struct sprdwl_vif *vif, const u8 *peer,
 }
 
 /* Roaming related stuff */
-int sprdwl_cfg80211_set_cqm_rssi_config(struct wiphy *wiphy,
+static int sprdwl_cfg80211_set_cqm_rssi_config(struct wiphy *wiphy,
 					struct net_device *ndev,
 					s32 rssi_thold, u32 rssi_hyst)
 {
@@ -3316,7 +3316,7 @@ void sprdwl_report_cqm(struct sprdwl_vif *vif, u8 rssi_event)
 #endif
 }
 
-int sprdwl_cfg80211_update_ft_ies(struct wiphy *wiphy, struct net_device *ndev,
+static int sprdwl_cfg80211_update_ft_ies(struct wiphy *wiphy, struct net_device *ndev,
 				  struct cfg80211_update_ft_ies_params *ftie)
 {
 	struct sprdwl_vif *vif = netdev_priv(ndev);
@@ -3413,7 +3413,7 @@ static int sprdwl_cfg80211_set_mac_acl(struct wiphy *wiphy,
 					    SPRDWL_SUBCMD_ADD, num, mac_addr);
 }
 
-int sprdwl_cfg80211_set_power_mgmt(struct wiphy *wiphy, struct net_device *ndev,
+static int sprdwl_cfg80211_set_power_mgmt(struct wiphy *wiphy, struct net_device *ndev,
 				   bool enabled, int timeout)
 {
 	struct sprdwl_vif *vif = netdev_priv(ndev);
@@ -3583,7 +3583,7 @@ static struct cfg80211_ops sprdwl_cfg80211_ops = {
 #endif
 };
 
-void sprdwl_save_ch_info(struct sprdwl_priv *priv, u32 band, u32 flags, int center_freq)
+static void sprdwl_save_ch_info(struct sprdwl_priv *priv, u32 band, u32 flags, int center_freq)
 {
 	int index = 0;
 	/* Workaround for bug873327, report freq list instead of channel list */
@@ -3741,7 +3741,7 @@ static void sprdwl_reg_notify(struct wiphy *wiphy,
 	}
 }
 #else
-void sprdwl_reg_notify(struct wiphy *wiphy,
+static void sprdwl_reg_notify(struct wiphy *wiphy,
 			      struct regulatory_request *request)
 {
 	struct sprdwl_priv *priv = wiphy_priv(wiphy);

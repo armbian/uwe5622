@@ -179,7 +179,7 @@ static void swd_insert_cycles(u32 n)
 		swd_clk_cycle();
 }
 
-u32 swd_transfer(u8 cmd, u32 *data)
+static u32 swd_transfer(u8 cmd, u32 *data)
 {
 	u32 ack = 0;
 	u32 bit;
@@ -523,7 +523,7 @@ static void swd_read_apidr(void)
 }
 
 
-u32 swd_sel_target(u8 cmd, u32 *data)
+static u32 swd_sel_target(u8 cmd, u32 *data)
 {
 	u32 bit, parity;
 	u32 n, val;
@@ -618,7 +618,7 @@ static void swd_device_en(void)
 
 /* Debug Exception and Monitor Control Register */
 /* (0xe000edfC) = 0x010007f1 */
-void swd_set_debug_mode(void)
+static void swd_set_debug_mode(void)
 {
 	int ret;
 	int addr;
@@ -645,7 +645,7 @@ void swd_set_debug_mode(void)
  * Debug Halting Control status Register
  * (0xe000edf0) = 0xa05f0003
  */
-void swd_hold_btwf_core(void)
+static void swd_hold_btwf_core(void)
 {
 	int ret;
 	int addr;

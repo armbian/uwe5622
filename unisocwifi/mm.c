@@ -29,7 +29,7 @@
 #define SKB_SHARED_INFO_OFFSET \
 	SKB_DATA_ALIGN(SPRDWL_MAX_DATA_RXLEN + NET_SKB_PAD)
 
-void check_mh_buffer(struct device *dev, void *buffer, dma_addr_t pa,
+static void check_mh_buffer(struct device *dev, void *buffer, dma_addr_t pa,
 		     size_t size, enum dma_data_direction direction)
 {
 #define MAX_RETRY_NUM 8

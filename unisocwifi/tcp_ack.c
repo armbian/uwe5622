@@ -322,7 +322,7 @@ static int sprdwl_tcp_ack_alloc_index(struct sprdwl_tcp_ack_manage *ack_m)
 }
 
 /* return val: 0 for not handle tx, 1 for handle tx */
-int sprdwl_tcp_ack_handle(struct sprdwl_msg_buf *new_msgbuf,
+static int sprdwl_tcp_ack_handle(struct sprdwl_msg_buf *new_msgbuf,
 			  struct sprdwl_tcp_ack_manage *ack_m,
 			  struct sprdwl_tcp_ack_info *ack_info,
 			  struct sprdwl_tcp_ack_msg *ack_msg,

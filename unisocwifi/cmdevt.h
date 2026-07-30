@@ -1128,4 +1128,14 @@ int sprdwl_set_wowlan(struct sprdwl_priv *priv, int subcmd, void *pad, int pad_l
 int sprdwl_sync_disconnect_event(struct sprdwl_vif *vif, unsigned int timeout);
 #endif
 int sprdwl_set_if_down(struct net_device *ndev);
+/* -Wmissing-prototypes: cross-file declarations */
+void sprdwl_cancel_scan(struct sprdwl_vif *vif);
+void sprdwl_cancel_sched_scan(struct sprdwl_vif *vif);
+void sprdwl_event_cqm(struct sprdwl_vif *vif, u8 *data, u16 len);
+void sprdwl_event_disconnect(struct sprdwl_vif *vif, u8 *data, u16 len);
+void sprdwl_event_mic_failure(struct sprdwl_vif *vif, u8 *data, u16 len);
+void sprdwl_event_scan_done(struct sprdwl_vif *vif, u8 *data, u16 len);
+void sprdwl_event_suspend_resume(struct sprdwl_vif *vif, u8 *data, u16 len);
+void sprdwl_event_tdls(struct sprdwl_vif *vif, u8 *data, u16 len);
+
 #endif

@@ -256,7 +256,7 @@ static inline struct pcie_addr_buffer
 	return addr_buffer;
 }
 
-void sprdwl_add_tx_list_head(struct list_head *tx_fail_list,
+static void sprdwl_add_tx_list_head(struct list_head *tx_fail_list,
 			     struct list_head *tx_list,
 			     int ac_index,
 			     int tx_count)
@@ -355,7 +355,7 @@ int sprdwl_add_topop_list(int chn, struct mbuf_t *head,
 	return 0;
 }
 
-void sprdwl_count_tx_tp(struct sprdwl_tx_msg *tx_msg, int num)
+static void sprdwl_count_tx_tp(struct sprdwl_tx_msg *tx_msg, int num)
 {
 	long long timeus = 0;
 	struct sprdwl_intf *intf = get_intf();
@@ -927,7 +927,7 @@ int sprdwl_intf_fill_msdu_dscr_test(struct sprdwl_priv *priv,
 }
 #endif
 
-int sprdwl_rx_fill_mbuf(struct mbuf_t *head, struct mbuf_t *tail, int num, int len)
+static int sprdwl_rx_fill_mbuf(struct mbuf_t *head, struct mbuf_t *tail, int num, int len)
 {
 	struct sprdwl_intf *intf = get_intf();
 	int ret = 0, count = 0;
@@ -956,7 +956,7 @@ int sprdwl_rx_fill_mbuf(struct mbuf_t *head, struct mbuf_t *tail, int num, int l
 	return ret;
 }
 
-int sprdwl_rx_common_push(int chn, struct mbuf_t **head, struct mbuf_t **tail,
+static int sprdwl_rx_common_push(int chn, struct mbuf_t **head, struct mbuf_t **tail,
 			  int *num, int len)
 {
 	int ret = 0;
@@ -1026,7 +1026,7 @@ inline void sprdwl_free_rx_data(struct sprdwl_intf *intf,
 		sprdwcn_bus_push_list(chn, (struct mbuf_t *)head, (struct mbuf_t *)tail, num);
 }
 
-void sprdwl_count_rx_tp(struct sprdwl_rx_if *rx_if, int num)
+static void sprdwl_count_rx_tp(struct sprdwl_rx_if *rx_if, int num)
 {
 	long long timeus = 0;
 	struct sprdwl_intf *intf = get_intf();
@@ -1167,7 +1167,7 @@ void sprdwl_handle_pop_list(void *data)
 }
 
 /*call back func for HIF pop_link*/
-int sprdwl_tx_data_pop_list(int channel, struct mbuf_t *head, struct mbuf_t *tail, int num)
+static int sprdwl_tx_data_pop_list(int channel, struct mbuf_t *head, struct mbuf_t *tail, int num)
 {
 	struct mbuf_t *mbuf_pos = NULL;
 #if defined(MORE_DEBUG)
@@ -1261,7 +1261,7 @@ int sprdwl_tx_free_pcie_data(struct sprdwl_intf *dev, unsigned char *data,
 	return 0;
 }
 
-int sprdwl_tx_cmd_pop_list(int channel, struct mbuf_t *head, struct mbuf_t *tail, int num)
+static int sprdwl_tx_cmd_pop_list(int channel, struct mbuf_t *head, struct mbuf_t *tail, int num)
 {
 	int count = 0;
 	struct mbuf_t *pos = NULL;
@@ -1309,13 +1309,13 @@ int sprdwl_tx_cmd_pop_list(int channel, struct mbuf_t *head, struct mbuf_t *tail
 	return 0;
 }
 
-int sprdwl_rx_cmd_push(int chn, struct mbuf_t **head, struct mbuf_t **tail, int *num)
+static int sprdwl_rx_cmd_push(int chn, struct mbuf_t **head, struct mbuf_t **tail, int *num)
 {
 	return sprdwl_rx_common_push(chn, head, tail,
 				     num, SPRDWL_MAX_CMD_RXLEN);
 }
 
-int sprdwl_rx_data_push(int chn, struct mbuf_t **head, struct mbuf_t **tail, int *num)
+static int sprdwl_rx_data_push(int chn, struct mbuf_t **head, struct mbuf_t **tail, int *num)
 {
 	return sprdwl_rx_common_push(chn, head, tail,
 				     num, SPRDWL_MAX_DATA_RXLEN);
@@ -1326,7 +1326,7 @@ int sprdwl_rx_data_push(int chn, struct mbuf_t **head, struct mbuf_t **tail, int
  * 0 - suspend
  * 1 - resume
  */
-int sprdwl_suspend_resume_handle(int chn, int mode)
+static int sprdwl_suspend_resume_handle(int chn, int mode)
 {
 	struct sprdwl_intf *intf = get_intf();
 	struct sprdwl_priv *priv = intf->priv;
@@ -1586,7 +1586,7 @@ void sprdwl_event_sta_lut(struct sprdwl_vif *vif, u8 *data, u16 len)
 	}
 }
 
-void sprdwl_tx_ba_mgmt(struct sprdwl_priv *priv, void *data, int len,
+static void sprdwl_tx_ba_mgmt(struct sprdwl_priv *priv, void *data, int len,
 		       unsigned char cmd_id, unsigned char ctx_id)
 {
 	struct sprdwl_msg_buf *msg;

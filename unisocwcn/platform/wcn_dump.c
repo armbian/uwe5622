@@ -19,6 +19,7 @@
 #include "wcn_log.h"
 #include "wcn_misc.h"
 #include "wcn_glb_reg.h"
+#include "wcn_dump.h"
 #ifdef CONFIG_WCN_USB
 #include "./usb_boot.h"
 #endif
@@ -226,7 +227,7 @@ out:
 	return count;
 }
 
-void mdbg_clear_log(void)
+static void mdbg_clear_log(void)
 {
 	if (mdbg_dev->ring_dev->ring->rp
 		!= mdbg_dev->ring_dev->ring->wp) {
@@ -530,7 +531,7 @@ static void wcn_dump_cp_register(struct wcn_dump_mem_reg *mem)
 /* IF CONFIG_UWE5623 IS NOT DEFINE, THIS FUNCTION WILL NOT BE USED!
  * THIS IS A ERROR BY COMPLIE. SO IT NOT BE STATIC
  */
-void wcn_dump_cp_data(struct wcn_dump_mem_reg *mem, int start, int end)
+static void wcn_dump_cp_data(struct wcn_dump_mem_reg *mem, int start, int end)
 {
 	int i;
 
@@ -605,7 +606,7 @@ static int cp_dcache_clean_invalid_all(void)
 
 /* select aon_apb_dap DAP(Debug Access Port) */
 #if defined CONFIG_UWE5622 || defined CONFIG_CHECK_DRIVER_BY_CHIPID
-void dap_sel_btwf_lite(void)
+static void dap_sel_btwf_lite(void)
 {
 	int ret;
 	unsigned int reg_val;
@@ -644,7 +645,7 @@ void dap_sel_btwf_lite(void)
 }
 
 /* select aon_apb_dap DAP(Debug Access Port) */
-void dap_sel_default_lite(void)
+static void dap_sel_default_lite(void)
 {
 	int ret;
 	unsigned int reg_val;
@@ -658,7 +659,7 @@ void dap_sel_default_lite(void)
 }
 
 /* enable aon_apb_dap_en */
-void apb_eb_lite(void)
+static void apb_eb_lite(void)
 {
 	int ret;
 	unsigned int reg_val;
@@ -688,7 +689,7 @@ void apb_eb_lite(void)
 #endif
 
 /* select aon_apb_dap DAP(Debug Access Port) */
-void dap_sel_btwf(void)
+static void dap_sel_btwf(void)
 {
 	int ret;
 	unsigned int reg_val;
@@ -727,7 +728,7 @@ void dap_sel_btwf(void)
 }
 
 /* select aon_apb_dap DAP(Debug Access Port) */
-void dap_sel_default(void)
+static void dap_sel_default(void)
 {
 	int ret;
 	unsigned int reg_val;
@@ -741,7 +742,7 @@ void dap_sel_default(void)
 }
 
 /* disable aon_apb_dap_rst */
-void apb_rst(void)
+static void apb_rst(void)
 {
 	int ret;
 	unsigned int reg_val;
@@ -770,7 +771,7 @@ void apb_rst(void)
 }
 
 /* enable aon_apb_dap_en */
-void apb_eb(void)
+static void apb_eb(void)
 {
 	int ret;
 	unsigned int reg_val;
@@ -798,7 +799,7 @@ void apb_eb(void)
 	WCN_INFO("%s 2:APB_EB:0x%x\n", __func__, reg_val);
 }
 
-void check_dap_is_ok(void)
+static void check_dap_is_ok(void)
 {
 	int ret;
 	unsigned int reg_val;
@@ -841,7 +842,7 @@ void hold_btwf_core(void)
  * Debug Halting Control status Register
  * (0xe000edf0) = 0xa05f0003
  */
-void release_btwf_core(void)
+static void release_btwf_core(void)
 {
 	int ret, i;
 	unsigned int reg_val;
@@ -884,7 +885,7 @@ void set_debug_mode(void)
  * Debug core Register Selector Register
  * The index R0 is 0, R1 is 1
  */
-void set_core_reg(unsigned int index)
+static void set_core_reg(unsigned int index)
 {
 	int ret, i;
 	unsigned int reg_val;
@@ -908,7 +909,7 @@ void set_core_reg(unsigned int index)
  * Example: write PC(R15)=0x12345678
  * reg_index = 15, value = 0x12345678
  */
-void write_core_reg_value(unsigned int reg_index, unsigned int value)
+static void write_core_reg_value(unsigned int reg_index, unsigned int value)
 {
 	int ret, i;
 	unsigned int reg_val;
@@ -989,7 +990,7 @@ void sprdwcn_bus_armreg_write(unsigned int reg_index, unsigned int value)
 }
 
 /* Debug Core register Data Register */
-void read_core_reg(unsigned int value, unsigned int *p)
+static void read_core_reg(unsigned int value, unsigned int *p)
 {
 	int ret, i;
 	unsigned int reg_val;
@@ -1213,7 +1214,7 @@ static int check_wifi_power_domain_ison(void)
 	return 0;
 }
 
-void dump_dummy_read(void)
+static void dump_dummy_read(void)
 {
 	int ret;
 	unsigned int reg_val;

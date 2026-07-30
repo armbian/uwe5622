@@ -70,7 +70,7 @@ void sdio_wait_pub_int_done(void)
 }
 EXPORT_SYMBOL(sdio_wait_pub_int_done);
 
-int pub_int_handle_thread(void *data)
+static int pub_int_handle_thread(void *data)
 {
 	union PUB_INT_STS0_REG pub_int_sts0 = {0};
 	int bit_num, ret;

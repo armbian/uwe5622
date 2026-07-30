@@ -73,7 +73,7 @@ unsigned int mem_pd_wifi_state(void)
 	return ret;
 }
 
-unsigned int mem_pd_spinlock_lock(int id)
+static unsigned int mem_pd_spinlock_lock(int id)
 {
 	int ret = 0;
 	int i = 0;
@@ -97,7 +97,7 @@ unsigned int mem_pd_spinlock_lock(int id)
 	return 0;
 }
 
-unsigned int mem_pd_spinlock_unlock(int id)
+static unsigned int mem_pd_spinlock_unlock(int id)
 {
 	int ret = 0;
 	unsigned int reg_val = UNLOCK_TOKEN;
@@ -589,7 +589,7 @@ static int ap_int_cp_wifi_bin_done(int subsys)
 	return 0;
 }
 
-int test_mem_clrear(int subsys)
+static int test_mem_clrear(int subsys)
 {
 	int err;
 

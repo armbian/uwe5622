@@ -27,6 +27,7 @@
 #include <linux/of_gpio.h>
 #endif
 #include <marlin_platform.h>
+#include "rfkill.h"
 
 
 static struct rfkill *bt_rfk;

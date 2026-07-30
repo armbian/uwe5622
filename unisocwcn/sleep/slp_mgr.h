@@ -54,4 +54,8 @@ void slp_mgr_drv_sleep(enum slp_subsys subsys, bool enable);
 int slp_mgr_wakeup(enum slp_subsys subsys);
 void slp_mgr_reset(void);
 
+
+/* -Wmissing-prototypes: unconditional (def in slp_test.c is unguarded) */
+int slp_test_init(void);
+
 #endif

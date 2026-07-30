@@ -22,7 +22,7 @@ static struct wcn_loopcheck loopcheck;
 static struct completion atcmd_completion;
 static struct mutex atcmd_lock;
 
-int at_cmd_send(char *buf, unsigned int len)
+static int at_cmd_send(char *buf, unsigned int len)
 {
 	unsigned char *send_buf = NULL;
 	struct mbuf_t *head, *tail;

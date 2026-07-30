@@ -17,6 +17,7 @@
 #include <marlin_platform.h>
 #include <wcn_bus.h>
 #include "mdbg_type.h"
+#include "wcn_op.h"
 
 #define WCN_OP_NAME	"wcn_op"
 

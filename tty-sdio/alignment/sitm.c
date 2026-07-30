@@ -53,7 +53,7 @@ static int data_ready(uint8_t *buf, uint32_t count)
 	return ret;
 }
 
-void parse_frame(data_ready_cb data_ready, frame_complete_cb frame_complete)
+static void parse_frame(data_ready_cb data_ready, frame_complete_cb frame_complete)
 {
 	uint8_t byte;
 	size_t buffer_size, bytes_read;
