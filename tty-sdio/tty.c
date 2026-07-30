@@ -703,7 +703,6 @@ static int  mtty_probe(struct platform_device *pdev)
 	mtty->pdata = pdata;
 	rval = mtty_tty_driver_init(mtty);
 	if (rval) {
-		mtty_tty_driver_exit(mtty);
 		kfree(mtty->port);
 		kfree(mtty);
 		mtty_destroy_pdata(&pdata);
