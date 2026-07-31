@@ -576,7 +576,7 @@ static int wifi_exception_event(void)
 	return 0;
 }
 
-int wifi_reset_callback(struct notifier_block *nb, unsigned long event, void *v)
+static int wifi_reset_callback(struct notifier_block *nb, unsigned long event, void *v)
 {
 	sprdwl_wifi_reset();
 	wifi_exception_event();
