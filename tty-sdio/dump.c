@@ -37,7 +37,7 @@ static void data_left_shift(unsigned char data_inout)
 	}
 }
 
-void do_gettimeofday(struct timeval *tv)
+static void do_gettimeofday(struct timeval *tv)
 {
 	struct timespec64 ts;
 	ktime_get_real_ts64(&ts);

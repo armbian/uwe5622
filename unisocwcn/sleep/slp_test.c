@@ -5,7 +5,7 @@
 #include "slp_mgr.h"
 #include "slp_sdio.h"
 static int test_cnt;
-int sleep_test_thread(void *data)
+static int sleep_test_thread(void *data)
 {
 	unsigned int ram_val;
 
@@ -20,6 +20,8 @@ int sleep_test_thread(void *data)
 		msleep(5000);
 		test_cnt++;
 	}
+
+	return 0;
 }
 
 static struct task_struct *slp_test_task;
