@@ -56,6 +56,11 @@
 #include "wcn_glb_reg.h"
 #include "wcn_glb.h"
 
+#if defined(CONFIG_STACKPROTECTOR) && defined(CONFIG_STACKPROTECTOR_PER_TASK)
+unsigned long __stack_chk_guard __read_mostly;
+EXPORT_SYMBOL(__stack_chk_guard);
+#endif
+
 #ifdef CONFIG_WCN_DOWNLOAD_FIRMWARE_FROM_HEX
 #include "../fw/firmware_hex.h"
 #endif
