@@ -1432,7 +1432,7 @@ static irqreturn_t marlin_bt_wake_int_isr(int irq, void *para)
 	return IRQ_HANDLED;
 }
 
-static int marlin_registsr_bt_wake(struct device *dev)
+static int __maybe_unused marlin_registsr_bt_wake(struct device *dev)
 {
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(7, 1, 0)
 	struct device_node *np;
@@ -2085,7 +2085,7 @@ void marlin_hold_cpu(void)
 	}
 }
 
-static void marlin_read_cali_data(void)
+static void __maybe_unused marlin_read_cali_data(void)
 {
 	int err;
 
@@ -3002,7 +3002,7 @@ static int disable_spur_remove(void)
 	return 0;
 }
 
-static void set_fm_supe_freq(int subsys, int val, unsigned long sub_state)
+static void __maybe_unused set_fm_supe_freq(int subsys, int val, unsigned long sub_state)
 {
 	switch (subsys) {
 	case MARLIN_FM:
@@ -3404,7 +3404,7 @@ static int chip_power_off(int subsys)
 	return 0;
 }
 
-static int gnss_powerdomain_open(void)
+static int __maybe_unused gnss_powerdomain_open(void)
 {
 	/* add by this. */
 	int ret = 0, retry_cnt = 0;

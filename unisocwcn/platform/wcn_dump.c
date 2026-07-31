@@ -645,7 +645,7 @@ static void dap_sel_btwf_lite(void)
 }
 
 /* select aon_apb_dap DAP(Debug Access Port) */
-static void dap_sel_default_lite(void)
+static void __maybe_unused dap_sel_default_lite(void)
 {
 	int ret;
 	unsigned int reg_val;

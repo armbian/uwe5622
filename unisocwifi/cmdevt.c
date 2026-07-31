@@ -2510,7 +2510,7 @@ int sprdwl_cmd_host_wakeup_fw(struct sprdwl_priv *priv, u8 ctx_id)
 	return ret;
 }
 
-static int sprdwl_cmd_req_lte_concur(struct sprdwl_priv *priv, u8 ctx_id, u8 user_channel)
+static int __maybe_unused sprdwl_cmd_req_lte_concur(struct sprdwl_priv *priv, u8 ctx_id, u8 user_channel)
 {
 	struct sprdwl_msg_buf *msg;
 

@@ -589,7 +589,7 @@ static int ap_int_cp_wifi_bin_done(int subsys)
 	return 0;
 }
 
-static int test_mem_clrear(int subsys)
+static int __maybe_unused test_mem_clrear(int subsys)
 {
 	int err;
 

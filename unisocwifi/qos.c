@@ -585,7 +585,7 @@ void reset_wmmac_ts_info(void)
 		remove_wmmac_ts_info(tsid);
 }
 
-static unsigned int priority_map_to_qos_index(int priority)
+static unsigned int __maybe_unused priority_map_to_qos_index(int priority)
 {
 	qos_head_type_t qos_index = SPRDWL_AC_BE;
 

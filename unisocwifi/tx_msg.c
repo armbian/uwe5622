@@ -426,7 +426,7 @@ add_xmit_list_tail(struct sprdwl_tx_msg *tx_msg,
 		 get_list_num(&tx_msg->xmit_msg_list.to_send_list));
 }
 
-static unsigned int queue_is_empty(struct sprdwl_tx_msg *tx_msg, enum sprdwl_mode mode)
+static unsigned int __maybe_unused queue_is_empty(struct sprdwl_tx_msg *tx_msg, enum sprdwl_mode mode)
 {
 	int i, j;
 	struct tx_t *tx_t_list = tx_msg->tx_list[mode];
