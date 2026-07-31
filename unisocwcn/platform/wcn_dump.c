@@ -528,10 +528,10 @@ static void wcn_dump_cp_register(struct wcn_dump_mem_reg *mem)
 	}
 }
 
-/* IF CONFIG_UWE5623 IS NOT DEFINE, THIS FUNCTION WILL NOT BE USED!
- * THIS IS A ERROR BY COMPLIE. SO IT NOT BE STATIC
+/* All callers are limited to CONFIG_UWE5623 or runtime chip detection, so
+ * fixed-chip builds leave this unused; __maybe_unused keeps them warning-free.
  */
-static void wcn_dump_cp_data(struct wcn_dump_mem_reg *mem, int start, int end)
+static void __maybe_unused wcn_dump_cp_data(struct wcn_dump_mem_reg *mem, int start, int end)
 {
 	int i;
 
@@ -689,7 +689,7 @@ static void apb_eb_lite(void)
 #endif
 
 /* select aon_apb_dap DAP(Debug Access Port) */
-static void dap_sel_btwf(void)
+static void __maybe_unused dap_sel_btwf(void)
 {
 	int ret;
 	unsigned int reg_val;
@@ -728,7 +728,7 @@ static void dap_sel_btwf(void)
 }
 
 /* select aon_apb_dap DAP(Debug Access Port) */
-static void dap_sel_default(void)
+static void __maybe_unused dap_sel_default(void)
 {
 	int ret;
 	unsigned int reg_val;
@@ -742,7 +742,7 @@ static void dap_sel_default(void)
 }
 
 /* disable aon_apb_dap_rst */
-static void apb_rst(void)
+static void __maybe_unused apb_rst(void)
 {
 	int ret;
 	unsigned int reg_val;
@@ -771,7 +771,7 @@ static void apb_rst(void)
 }
 
 /* enable aon_apb_dap_en */
-static void apb_eb(void)
+static void __maybe_unused apb_eb(void)
 {
 	int ret;
 	unsigned int reg_val;
@@ -819,7 +819,7 @@ static void check_dap_is_ok(void)
  * Debug Halting Control status Register
  * (0xe000edf0) = 0xa05f0003
  */
-void hold_btwf_core(void)
+static void hold_btwf_core(void)
 {
 	int ret, i;
 	unsigned int reg_val;
@@ -862,7 +862,7 @@ static void release_btwf_core(void)
 }
 
 /* Debug Exception and Monitor Control Register */
-void set_debug_mode(void)
+static void set_debug_mode(void)
 {
 	int ret, i;
 	unsigned int reg_val;

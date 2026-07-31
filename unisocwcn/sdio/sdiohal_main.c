@@ -659,7 +659,7 @@ static void sdiohal_dump_sys_signal(int index, struct debug_bus_t *config)
 				   data_buf, config[index].size * 4, false);
 }
 
-static void sdiohal_dump_debug_bus(void)
+static void __maybe_unused sdiohal_dump_debug_bus(void)
 {
 	unsigned char index;
 	struct debug_bus_t *config = bus_config;

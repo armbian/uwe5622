@@ -3902,7 +3902,7 @@ EXPORT_SYMBOL_GPL(marlin_set_sleep);
 /* Temporary modification for UWE5623:
  * cmd52 read/write timeout -110 issue.
  */
-static void marlin_read_test_after_reset(void)
+static void __maybe_unused marlin_read_test_after_reset(void)
 {
 	int ret;
 	unsigned int reg_addr = AON_APB_TEST_READ_REG, reg_val;

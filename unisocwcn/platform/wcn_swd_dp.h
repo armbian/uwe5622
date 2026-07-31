@@ -54,6 +54,4 @@
 #define DAP_ADDR	0x1A0
 #define DAP_ACK_ADDR	(0x140 + 0x0F)
 
-void hold_btwf_core(void);
-void set_debug_mode(void);
 int swd_dump_arm_reg(void);
