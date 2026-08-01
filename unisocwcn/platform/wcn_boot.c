@@ -115,8 +115,8 @@ static char *wcn_fw_path[WCN_FW_MAX_PATH_NUM] = {
 #define REG_PMU_APB_XTL_WAIT_CNT0 0xe42b00ac
 #endif
 
-static char BTWF_FIRMWARE_PATH[255];
-static char GNSS_FIRMWARE_PATH[255];
+static char BTWF_FIRMWARE_PATH[WCN_FIRMWARE_PATH_MAX];
+static char GNSS_FIRMWARE_PATH[WCN_FIRMWARE_PATH_MAX];
 
 struct wcn_sync_info_t {
 	unsigned int init_status;
@@ -3079,12 +3079,12 @@ int find_firmware_path(void)
 	}
 	WCN_INFO("BTWF path is %s\n", BTWF_FIRMWARE_PATH);
 	pre_len = strlen(BTWF_FIRMWARE_PATH) - strlen("wcnmodem");
-	memcpy(GNSS_FIRMWARE_PATH,
-		BTWF_FIRMWARE_PATH,
-		strlen(BTWF_FIRMWARE_PATH));
-	memcpy(&GNSS_FIRMWARE_PATH[pre_len], "gnssmodem",
-		strlen("gnssmodem"));
-	GNSS_FIRMWARE_PATH[pre_len + strlen("gnssmodem")] = '\0';
+	ret = snprintf(GNSS_FIRMWARE_PATH, WCN_FIRMWARE_PATH_MAX,
+		"%.*sgnssmodem", pre_len, BTWF_FIRMWARE_PATH);
+	if (ret >= WCN_FIRMWARE_PATH_MAX) {
+		WCN_ERR("GNSS path truncated: %s\n", BTWF_FIRMWARE_PATH);
+		return -1;
+	}
 	WCN_INFO("GNSS path is %s\n", GNSS_FIRMWARE_PATH);
 
 	return 0;

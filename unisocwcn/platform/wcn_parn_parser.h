@@ -18,6 +18,14 @@
 #ifndef _WCN_PARN_PARSER
 #define _WCN_PARN_PARSER
 
+/*
+ * The parser writes into a plain char * and cannot query its size, so the
+ * buffer size is part of the interface: callers must provide at least this
+ * many bytes. The value covers the longest path the parser can produce from
+ * a maximum-length fstab line.
+ */
+#define WCN_FIRMWARE_PATH_MAX 256
+
 int parse_firmware_path(char *firmware_path);
 
 #endif

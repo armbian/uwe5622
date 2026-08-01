@@ -82,8 +82,9 @@ static char *fgets(char *buf, int buf_len, struct file *fp)
 	else
 		return NULL;
 
-	if (i < buf_len)
-		buf[i] = 0;
+	if (i >= buf_len)
+		i = buf_len - 1;
+	buf[i] = 0;
 
 	return buf;
 }
@@ -98,6 +99,7 @@ static int load_fstab_conf(const char *p_path, char *WCN_PATH)
 	char *p;
 	char *temp;
 	bool match_flag;
+	int len;
 
 	match_flag = false;
 	p = line;
@@ -121,12 +123,13 @@ static int load_fstab_conf(const char *p_path, char *WCN_PATH)
 		if (p_name != NULL) {
 			temp = strstr(p_name, "userdata");
 			if (temp != NULL) {
-				snprintf(WCN_PATH, strlen(p_name)+1,
-					"%s", p_name);
-				WCN_PATH[strlen(WCN_PATH) - strlen(temp)]
-					= '\0';
-				snprintf(WCN_PATH, strlen(WCN_PATH)+9,
-					"%s%s", WCN_PATH, "wcnmodem");
+				len = snprintf(WCN_PATH, WCN_FIRMWARE_PATH_MAX,
+					"%.*swcnmodem",
+					(int)(temp - p_name), p_name);
+				if (len >= WCN_FIRMWARE_PATH_MAX) {
+					WCN_ERR("path truncated: %s\n", p_name);
+					continue;
+				}
 				match_flag = true;
 				break;
 			}
