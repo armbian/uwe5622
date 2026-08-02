@@ -11,6 +11,7 @@
  * GNU General Public License for more details.
  */
 
+#include <linux/err.h>
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/platform_device.h>
@@ -516,8 +517,10 @@ static int mtty_tty_driver_init(struct mtty_device *device)
 		return -ENOMEM;
 
 	driver = tty_alloc_driver(MTTY_DEV_MAX_NR * 2, 0);
-	if (!driver)
-		return -ENOMEM;
+	if (IS_ERR(driver)) {
+		tty_port_destroy(device->port);
+		return PTR_ERR(driver);
+	}
 
 	/*
 	* Initialize the tty_driver structure
