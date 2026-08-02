@@ -1,0 +1,107 @@
+# UWE5622 WiFi Driver - Armbian Kernel Build Tests
+# Uses Armbian build system to compile kernel and test driver
+
+name: Kernel Build (Armbian)
+
+permissions:
+  contents: write
+  pull-requests: write
+
+on:
+  push:
+    branches: [ master, develop ]
+  pull_request:
+    branches: [ master, develop ]
+  workflow_dispatch:
+
+jobs:
+  build-armbian-kernel:
+    name: Build Armbian (${{ matrix.board }} ${{ matrix.branch }})
+    runs-on: [self-hosted, x64]
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - board: orangepizero2
+            branch: current
+            family: sunxi64
+          - board: orangepizero2
+            branch: edge
+            family: sunxi64
+          - board: orangepi4-lts
+            branch: current
+            family: rockchip64
+          - board: orangepi4-lts
+            branch: edge
+            family: rockchip64
+          - board: orangepi3b
+            branch: vendor
+            family: rk35xx
+          - board: orangepizero2
+            branch: legacy
+            family: sunxi64
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Clone or update Armbian build repository
+        run: |
+          BUILD_DIR="/opt/armbian-build-${{ runner.name }}"
+          sudo git config --global --add safe.directory "$BUILD_DIR"
+          if [ -d "$BUILD_DIR/.git" ]; then
+            echo "Updating existing Armbian build repository..."
+            cd "$BUILD_DIR"
+            git fetch -q origin
+            sudo git reset -q --hard origin/main
+            sudo git clean -fdx -e cache
+          else
+            echo "Cloning Armbian build repository..."
+            git clone -q --depth 1 https://github.com/armbian/build "$BUILD_DIR"
+          fi
+          echo "::notice::Armbian build repository ready"
+
+      - name: Get commit hash and update Armbian driver reference
+        run: |
+          COMMIT_SHA="${{ github.event.pull_request.head.sha || github.sha }}"
+          echo "::notice::Using commit: $COMMIT_SHA"
+          sed -i "s/local uwe5622ver='commit:[a-f0-9]*/local uwe5622ver='commit:$COMMIT_SHA/" "/opt/armbian-build-${{ runner.name }}/lib/functions/compilation/patch/drivers_network.sh"
+
+      - name: Copy workflow files to Armbian build directory
+        run: |
+          sudo cp "workflow_files/linux-${{ matrix.family }}-${{ matrix.branch }}.config" "/opt/armbian-build-${{ runner.name }}/config/kernel/linux-${{ matrix.family }}-${{ matrix.branch }}.config"
+          sudo cp workflow_files/minimal-build-test.sh "/opt/armbian-build-${{ runner.name }}/extensions/minimal-build-test.sh"
+          echo "::notice::Copied workflow files"
+
+      - name: Build kernel
+        id: build
+        run: |
+          cd "/opt/armbian-build-${{ runner.name }}"
+          ./compile.sh BOARD=${{ matrix.board }} BRANCH=${{ matrix.branch }} kernel KERNEL_GIT=shallow ENABLE_EXTENSIONS=minimal-build-test ARTIFACT_IGNORE_CACHE=yes USE_CCACHE=yes
+
+      - name: Check required modules were built
+        run: |
+          LOG_FILE=$(ls "/opt/armbian-build-${{ runner.name }}/output/logs"/log-kernel-*.log | head -1)
+          echo "::notice::Checking log: $LOG_FILE"
+
+          REQUIRED_MODULES=("uwe5622_bsp_sdio.ko" "sprdbt_tty.ko" "sprdwl_ng.ko")
+          MISSING_MODULES=()
+
+          for module in "${REQUIRED_MODULES[@]}"; do
+            if grep -q "INSTALL.*$module" "$LOG_FILE"; then
+              echo "::notice::✓ Found $module"
+            else
+              echo "::error::✗ Missing $module"
+              MISSING_MODULES+=("$module")
+            fi
+          done
+
+          if [ ${#MISSING_MODULES[@]} -gt 0 ]; then
+            echo "::error::Build failed: missing modules: ${MISSING_MODULES[*]}"
+            exit 1
+          else
+            echo "::notice::✓ All required modules built successfully"
+          fi
+
+      - name: Clean output folder
+        run: |
+          rm -rf "/opt/armbian-build-${{ runner.name }}/output"
+          echo "::notice::Cleaned build output folder"
