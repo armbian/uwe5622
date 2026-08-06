@@ -16,6 +16,7 @@
  */
 
 #include <linux/of.h>
+#include <linux/string.h>
 #include <linux/mutex.h>
 #include <linux/poll.h>
 #include <linux/proc_fs.h>
@@ -95,7 +96,11 @@ void mdbg_assert_interface(char *str)
 #endif
 
 	memset(mdbg_proc->assert.buf, 0, MDBG_ASSERT_SIZE);
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(7, 2, 0)
+	strscpy(mdbg_proc->assert.buf, str, MDBG_ASSERT_SIZE);
+#else
 	strncpy(mdbg_proc->assert.buf, str, len);
+#endif
 	WCN_INFO("mdbg_assert_interface:%s\n",
 		(char *)(mdbg_proc->assert.buf));
 

@@ -23,6 +23,7 @@
  * GNU General Public License for more details.
  */
 
+#include <linux/string.h>
 #include "sprdwl.h"
 #include "cfg80211.h"
 #include "cmdevt.h"
@@ -974,7 +975,11 @@ static int sprdwl_cfg80211_start_ap(struct wiphy *wiphy,
 		wl_ndev_log(L_ERR, ndev, "%s invalid SSID!\n", __func__);
 		return -EINVAL;
 	}
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(7, 2, 0)
+	memcpy_and_pad(vif->ssid, sizeof(vif->ssid), settings->ssid, settings->ssid_len, 0);
+#else
 	strncpy(vif->ssid, settings->ssid, settings->ssid_len);
+#endif
 	vif->ssid_len = settings->ssid_len;
 
 #ifdef STA_SOFTAP_SCC_MODE
@@ -1045,7 +1050,11 @@ static int sprdwl_cfg80211_start_ap(struct wiphy *wiphy,
 	*(data + index) = (u8)(settings->ssid_len + 1);
 	index += 1;
 	/* copy ssid */
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(7, 2, 0)
+	memcpy(data + index, settings->ssid, settings->ssid_len);
+#else
 	strncpy(data + index, settings->ssid, settings->ssid_len);
+#endif
 	index += settings->ssid_len;
 	/* set hidden ssid flag */
 	*(data + index) = (u8)settings->hidden_ssid;
@@ -1816,8 +1825,12 @@ static int sprdwl_cfg80211_scan(struct wiphy *wiphy,
 			if (!ssids[i].ssid_len)
 				continue;
 			scan_ssids->len = ssids[i].ssid_len;
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(7, 2, 0)
+			memcpy(scan_ssids->ssid, ssids[i].ssid, ssids[i].ssid_len);
+#else
 			strncpy(scan_ssids->ssid, ssids[i].ssid,
 				ssids[i].ssid_len);
+#endif
 			scan_ssids_len += (ssids[i].ssid_len
 					   + sizeof(scan_ssids->len));
 			scan_ssids = (struct sprdwl_scan_ssid *)
@@ -2277,7 +2290,11 @@ static int sprdwl_cfg80211_connect(struct wiphy *wiphy, struct net_device *ndev,
 	if (!sme->ssid) {
 		wl_ndev_log(L_DBG, ndev, "No SSID specified!\n");
 	} else {
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(7, 2, 0)
+		memcpy_and_pad(con.ssid, sizeof(con.ssid), sme->ssid, sme->ssid_len, 0);
+#else
 		strncpy(con.ssid, sme->ssid, sme->ssid_len);
+#endif
 		con.ssid_len = sme->ssid_len;
 		vif->sm_state = SPRDWL_CONNECTING;
 
@@ -2292,7 +2309,11 @@ static int sprdwl_cfg80211_connect(struct wiphy *wiphy, struct net_device *ndev,
 		ret = sprdwl_connect(vif->priv, vif->ctx_id, &con);
 		if (ret)
 			goto err;
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(7, 2, 0)
+		memcpy_and_pad(vif->ssid, sizeof(vif->ssid), sme->ssid, sme->ssid_len, 0);
+#else
 		strncpy(vif->ssid, sme->ssid, sme->ssid_len);
+#endif
 		vif->ssid_len = sme->ssid_len;
 		wl_ndev_log(L_DBG, ndev, "%s %s\n", __func__, vif->ssid);
 	}
@@ -2898,11 +2919,23 @@ void sprdwl_cfg80211_dump_frame_prot_info(int send, int freq,
 }
 
 /* P2P related stuff */
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(7, 2, 0)
 static int sprdwl_cfg80211_remain_on_channel(struct wiphy *wiphy,
 					     struct wireless_dev *wdev,
 					     struct ieee80211_channel *chan,
-					     unsigned int duration, u64 *cookie)
+					     unsigned int duration,
+					     u64 *cookie, const u8 *rx_addr)
+#else
+static int sprdwl_cfg80211_remain_on_channel(struct wiphy *wiphy,
+					     struct wireless_dev *wdev,
+					     struct ieee80211_channel *chan,
+					     unsigned int duration,
+					     u64 *cookie)
+#endif
 {
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(7, 2, 0)
+	(void)rx_addr; /* unused in this driver */
+#endif
 	struct sprdwl_vif *vif = container_of(wdev, struct sprdwl_vif, wdev);
 	enum nl80211_channel_type channel_type = 0;
 	static u64 remain_index;
