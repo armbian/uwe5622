@@ -10,6 +10,7 @@
  * GNU General Public License for more details.
  */
 #include <asm/byteorder.h>
+#include <linux/string.h>
 #include <marlin_platform.h>
 #include <wcn_bus.h>
 
@@ -471,10 +472,15 @@ static int wcn_fill_dump_head_info(struct wcn_dump_mem_reg *mem_cfg, int cnt)
 		return -1;
 	}
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(7, 2, 0)
+	strscpy_pad(head->version, WCN_DUMP_VERSION_NAME, sizeof(head->version));
+	strscpy_pad(head->sub_version, WCN_DUMP_VERSION_SUB_NAME, sizeof(head->sub_version));
+#else
 	strncpy(head->version, WCN_DUMP_VERSION_NAME,
 		strlen(WCN_DUMP_VERSION_NAME));
 	strncpy(head->sub_version, WCN_DUMP_VERSION_SUB_NAME,
 		strlen(WCN_DUMP_VERSION_SUB_NAME));
+#endif
 	head->n_sec = cpu_to_le32(cnt);
 	len = head_len;
 	for (i = 0; i < cnt; i++) {
