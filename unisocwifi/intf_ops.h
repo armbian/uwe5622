@@ -96,6 +96,7 @@ static inline int sprdwl_get_ini_status(struct sprdwl_priv *priv)
 
 
 /* -Wmissing-prototypes: cross-file declarations */
+struct sprdwl_intf;
 int if_tx_one(struct sprdwl_intf *intf, unsigned char *data, int len, int chn);
 
 #endif
