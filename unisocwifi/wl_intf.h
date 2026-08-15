@@ -141,7 +141,7 @@ struct pcie_addr_buffer {
 		unsigned char buffer_type:1;
 		unsigned char buffer_inuse:1;
 	} buffer_ctrl;
-	unsigned char pcie_addr[0][5];
+	unsigned char pcie_addr[][5];
 } __packed;
 
 struct txc_addr_buff {
