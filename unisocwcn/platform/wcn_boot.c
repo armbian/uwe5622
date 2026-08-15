@@ -305,6 +305,18 @@ static struct raw_notifier_head marlin_reset_notifiers[MARLIN_ALL];
 struct marlin_device *marlin_dev;
 struct sprdwcn_gnss_ops *gnss_ops;
 
+/* int_ap is a gpio_desc pointer on 7.1+ and a legacy gpio number (0 or a
+ * negative errno when absent) before that; hide the difference from callers.
+ */
+static inline bool marlin_int_ap_present(void)
+{
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(7, 1, 0)
+	return marlin_dev->int_ap != NULL;
+#else
+	return marlin_dev->int_ap > 0;
+#endif
+}
+
 unsigned char  flag_reset;
 char functionmask[8];
 static unsigned int reg_val;
@@ -3368,7 +3380,7 @@ int chip_power_on(int subsys)
 	mem_pd_poweroff_deinit();
 #endif
 #ifdef CONFIG_WCN_SDIO
-	if (marlin_dev->int_ap > 0)
+	if (marlin_int_ap_present())
 		sdio_pub_int_poweron(true);
 #endif
 #endif
@@ -3397,7 +3409,7 @@ static int chip_power_off(int subsys)
 #endif
 	loopcheck_first_boot_clear();
 #ifdef CONFIG_WCN_SDIO
-	if (marlin_dev->int_ap > 0)
+	if (marlin_int_ap_present())
 		sdio_pub_int_poweron(false);
 #endif
 
@@ -4147,7 +4159,7 @@ static int marlin_remove(struct platform_device *pdev)
 	log_dev_exit();
 	proc_fs_exit();
 #ifdef CONFIG_WCN_SDIO
-	if (marlin_dev->int_ap > 0)
+	if (marlin_int_ap_present())
 		sdio_pub_int_deinit();
 #endif
 #ifdef CONFIG_MEM_PD
