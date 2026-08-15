@@ -1110,6 +1110,7 @@ static void sprdwl_set_mac_addr(struct sprdwl_vif *vif, u8 *pending_addr,
 	case NL80211_IFTYPE_P2P_CLIENT:
 	case NL80211_IFTYPE_P2P_GO:
 		addr[4] ^= 0x80;
+		fallthrough;
 	case NL80211_IFTYPE_P2P_DEVICE:
 		addr[0] ^= 0x02;
 		break;

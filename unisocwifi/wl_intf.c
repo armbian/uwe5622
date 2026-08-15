@@ -1508,6 +1508,7 @@ void sprdwl_event_sta_lut(struct sprdwl_vif *vif, u8 *data, u16 len)
 	case UPD_LUT_INDEX:
 		peer_entry_delba((void *)intf, i);
 		sprdwl_dis_flush_txlist(intf, i);
+		fallthrough;
 	case ADD_LUT_INDEX:
 		intf->peer_entry[i].lut_index = i;
 		intf->peer_entry[i].ctx_id = sta_lut->ctx_id;
