@@ -863,7 +863,6 @@ static ssize_t at_cmd_write(struct file *filp,
 	long int long_data;
 	int ret;
 	unsigned char *send_buf = NULL;
-	struct timespec now;
 
 	if (count > SDIOHAL_WRITE_SIZE) {
 		sdiohal_err("%s write size > %d\n",

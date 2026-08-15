@@ -255,8 +255,9 @@ void sdiohal_unlock_scan_ws(void)
 
 static void sdiohal_wakelock_init(void)
 {
-	struct sdiohal_data_t *p_data = sdiohal_get_data();
 #if LINUX_VERSION_CODE < KERNEL_VERSION(6, 16, 0)
+	struct sdiohal_data_t *p_data = sdiohal_get_data();
+
 	/*wakeup_source pointer*/
 	p_data->tx_ws = wakeup_source_create("sdiohal_tx_wakelock");
 	wakeup_source_add(p_data->tx_ws);
@@ -269,9 +270,10 @@ static void sdiohal_wakelock_init(void)
 
 static void sdiohal_wakelock_deinit(void)
 {
-	struct sdiohal_data_t *p_data = sdiohal_get_data();
-	/*wakeup_source pointer*/
 #if LINUX_VERSION_CODE < KERNEL_VERSION(6, 16, 0)
+	struct sdiohal_data_t *p_data = sdiohal_get_data();
+
+	/*wakeup_source pointer*/
 	wakeup_source_remove(p_data->tx_ws);
 	wakeup_source_destroy(p_data->tx_ws);
 	wakeup_source_remove(p_data->rx_ws);

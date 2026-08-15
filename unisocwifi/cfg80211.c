@@ -2476,7 +2476,6 @@ void sprdwl_report_scan_result(struct sprdwl_vif *vif, u16 chan, s16 rssi,
 	struct ieee80211_mgmt *mgmt = (struct ieee80211_mgmt *)frame;
 	struct ieee80211_channel *channel;
 	struct cfg80211_bss *bss;
-	struct timespec ts;
 	u16 capability, beacon_interval;
 	u32 freq;
 	s32 signal;
@@ -2572,7 +2571,6 @@ void sprdwl_report_connection(struct sprdwl_vif *vif,
 	struct ieee80211_channel *channel;
 	struct ieee80211_mgmt *mgmt;
 	struct cfg80211_bss *bss = NULL;
-	struct timespec ts;
 #ifdef WMMAC_WFA_CERTIFICATION
 	struct wmm_params_element *wmm_params;
 	int i;
