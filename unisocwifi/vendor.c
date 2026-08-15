@@ -443,6 +443,23 @@ static void calc_radio_dif(struct sprdwl_llstat_radio *dif_radio,
 	}
 }
 
+/* Map the driver's connection state machine onto the wifi_connection_state
+ * values the link layer stats consumer expects; the two enums share no
+ * numbering, so an unmapped copy hands userspace meaningless states.
+ */
+static enum wifi_connection_state
+sprdwl_sm_state_to_conn_state(enum sm_state sm_state)
+{
+	switch (sm_state) {
+	case SPRDWL_CONNECTING:
+		return WIFI_ASSOCIATING;
+	case SPRDWL_CONNECTED:
+		return WIFI_ASSOCIATED;
+	default:
+		return WIFI_DISCONNECTED;
+	}
+}
+
 /*get link layer status function---CMD ID:15*/
 static int sprdwl_vendor_get_llstat_handler(struct wiphy *wiphy,
 					    struct wireless_dev *wdev,
@@ -487,7 +504,7 @@ static int sprdwl_vendor_get_llstat_handler(struct wiphy *wiphy,
 	iface_st->info.mode = vif->mode;
 	memcpy(iface_st->info.mac_addr, vif->ndev->dev_addr,
 	       ETH_ALEN);
-	iface_st->info.state = vif->sm_state;
+	iface_st->info.state = sprdwl_sm_state_to_conn_state(vif->sm_state);
 	memcpy(iface_st->info.ssid, vif->ssid,
 	       IEEE80211_MAX_SSID_LEN);
 	ether_addr_copy(iface_st->info.bssid, vif->bssid);
