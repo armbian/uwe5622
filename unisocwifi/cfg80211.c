@@ -2099,9 +2099,13 @@ static int sprdwl_cfg80211_connect(struct wiphy *wiphy, struct net_device *ndev,
 	struct sprdwl_intf *intf = (struct sprdwl_intf *)vif->priv->hw_priv;
 #endif
 	struct sprdwl_cmd_connect con;
-	enum sm_state old_state = vif->sm_state;
+	enum sm_state old_state;
+	u8 old_bssid[ETH_ALEN];
+	u8 old_ssid[IEEE80211_MAX_SSID_LEN];
+	int old_ssid_len;
 	int is_wep = (sme->crypto.cipher_group == WLAN_CIPHER_SUITE_WEP40) ||
 	    (sme->crypto.cipher_group == WLAN_CIPHER_SUITE_WEP104);
+	bool state_published = false;
 	int random_mac_flag;
 	int ret = -EPERM;
 
@@ -2123,6 +2127,13 @@ static int sprdwl_cfg80211_connect(struct wiphy *wiphy, struct net_device *ndev,
 	}
 
 	memset(&con, 0, sizeof(con));
+	if (!sme->ssid || !sme->ssid_len ||
+	    sme->ssid_len > sizeof(con.ssid)) {
+		wl_ndev_log(L_ERR, ndev, "%s invalid SSID length: %zu\n",
+			    __func__, sme->ssid_len);
+		ret = -EINVAL;
+		goto err;
+	}
 
 	/*workround for bug 771600*/
 	if (vif->sm_state == SPRDWL_CONNECTING) {
@@ -2189,30 +2200,43 @@ static int sprdwl_cfg80211_connect(struct wiphy *wiphy, struct net_device *ndev,
 
 	/* Set PSK */
 	if (sme->key_len) {
+		u32 cipher = sme->crypto.cipher_group;
+
+		if (!sme->key || sme->key_len > WLAN_MAX_KEY_LEN ||
+		    sme->key_idx >= ARRAY_SIZE(vif->key[SPRDWL_GROUP])) {
+			wl_ndev_log(L_ERR, ndev,
+				    "%s invalid key index %d or length %d\n",
+				    __func__, sme->key_idx, sme->key_len);
+			ret = -EINVAL;
+			goto err;
+		}
+
+		if (sme->crypto.n_ciphers_pairwise)
+			cipher = sme->crypto.ciphers_pairwise[0];
+
 		if (sme->crypto.cipher_group == WLAN_CIPHER_SUITE_WEP40 ||
 		    sme->crypto.cipher_group == WLAN_CIPHER_SUITE_WEP104 ||
-		    sme->crypto.ciphers_pairwise[0] ==
-		    WLAN_CIPHER_SUITE_WEP40 ||
-		    sme->crypto.ciphers_pairwise[0] ==
-		    WLAN_CIPHER_SUITE_WEP104) {
+		    cipher == WLAN_CIPHER_SUITE_WEP40 ||
+		    cipher == WLAN_CIPHER_SUITE_WEP104) {
+			if (sme->key_len != WLAN_KEY_LEN_WEP104 &&
+			    sme->key_len != WLAN_KEY_LEN_WEP40) {
+				wl_ndev_log(L_ERR, ndev,
+					    "%s invalid WEP key length\n",
+					    __func__);
+				ret = -EINVAL;
+				goto err;
+			}
 			vif->key_index[SPRDWL_GROUP] = sme->key_idx;
 			vif->key_len[SPRDWL_GROUP][sme->key_idx] = sme->key_len;
 			memcpy(vif->key[SPRDWL_GROUP][sme->key_idx], sme->key,
 			       sme->key_len);
-			ret =
-			    sprdwl_add_cipher_key(vif, 0, sme->key_idx,
-						  sme->crypto.
-						  ciphers_pairwise[0],
-						  NULL, NULL);
+			ret = sprdwl_add_cipher_key(vif, 0, sme->key_idx,
+						    cipher, NULL, NULL);
 			if (ret)
 				goto err;
-		} else if (sme->key_len > WLAN_MAX_KEY_LEN) {
-			wl_ndev_log(L_ERR, ndev, "%s invalid key len: %d\n", __func__,
-				   sme->key_len);
-			ret = -EINVAL;
-			goto err;
 		} else {
-			wl_ndev_log(L_DBG, ndev, "PSK %s\n", sme->key);
+			wl_ndev_log(L_DBG, ndev, "key provided, len %d\n",
+				    sme->key_len);
 			con.psk_len = sme->key_len;
 			memcpy(con.psk, sme->key, sme->key_len);
 		}
@@ -2253,11 +2277,9 @@ static int sprdwl_cfg80211_connect(struct wiphy *wiphy, struct net_device *ndev,
 	/* Set BSSID */
 	if (sme->bssid != NULL) {
 		memcpy(con.bssid, sme->bssid, sizeof(con.bssid));
-		memcpy(vif->bssid, sme->bssid, sizeof(vif->bssid));
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 15, 0)
 	} else if (sme->bssid_hint != NULL) {
 		memcpy(con.bssid, sme->bssid_hint, sizeof(con.bssid));
-		memcpy(vif->bssid, sme->bssid_hint, sizeof(vif->bssid));
 #endif
 	} else {
 		wl_ndev_log(L_DBG, ndev, "No BSSID specified!\n");
@@ -2268,60 +2290,58 @@ static int sprdwl_cfg80211_connect(struct wiphy *wiphy, struct net_device *ndev,
 	    sme->crypto.cipher_group == WLAN_CIPHER_SUITE_WEP104) {
 		wl_ndev_log(L_DBG, ndev, "%s WEP cipher_group\n", __func__);
 
-		if (sme->key_len <= 0) {
+		if (!sme->key_len) {
 			wl_ndev_log(L_DBG, ndev, "No key specified!\n");
 		} else {
-			if (sme->key_len != WLAN_KEY_LEN_WEP104 &&
-			    sme->key_len != WLAN_KEY_LEN_WEP40) {
-				wl_ndev_log(L_ERR, ndev, "%s invalid WEP key length!\n",
-					   __func__);
-				ret = -EINVAL;
-				goto err;
-			}
-
-			sprdwl_set_def_key(vif->priv, vif->ctx_id,
-					   sme->key_idx);
+			ret = sprdwl_set_def_key(vif->priv, vif->ctx_id,
+					     sme->key_idx);
 			if (ret)
 				goto err;
 		}
 	}
 
 	/* Set ESSID */
-	if (!sme->ssid) {
-		wl_ndev_log(L_DBG, ndev, "No SSID specified!\n");
-	} else {
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(7, 2, 0)
-		memcpy_and_pad(con.ssid, sizeof(con.ssid), sme->ssid, sme->ssid_len, 0);
-#else
-		strncpy(con.ssid, sme->ssid, sme->ssid_len);
-#endif
-		con.ssid_len = sme->ssid_len;
-		vif->sm_state = SPRDWL_CONNECTING;
+	memcpy(con.ssid, sme->ssid, sme->ssid_len);
+	con.ssid_len = sme->ssid_len;
 
-		if (vif->wps_flag) {
-			if (strstr(con.ssid, "Marvell") || strstr(con.ssid, "Ralink")) {
-				wl_info("%s, WPS connection\n", __func__);
-				msleep(3000);
-			}
-			vif->wps_flag = 0;
+	if (vif->wps_flag) {
+		if (strnstr((char *)con.ssid, "Marvell", con.ssid_len) ||
+		    strnstr((char *)con.ssid, "Ralink", con.ssid_len)) {
+			wl_info("%s, WPS connection\n", __func__);
+			msleep(3000);
 		}
-
-		ret = sprdwl_connect(vif->priv, vif->ctx_id, &con);
-		if (ret)
-			goto err;
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(7, 2, 0)
-		memcpy_and_pad(vif->ssid, sizeof(vif->ssid), sme->ssid, sme->ssid_len, 0);
-#else
-		strncpy(vif->ssid, sme->ssid, sme->ssid_len);
-#endif
-		vif->ssid_len = sme->ssid_len;
-		wl_ndev_log(L_DBG, ndev, "%s %s\n", __func__, vif->ssid);
+		vif->wps_flag = 0;
 	}
+
+	/* Publish all connection metadata before firmware can report success. */
+	old_state = vif->sm_state;
+	old_ssid_len = vif->ssid_len;
+	memcpy(old_ssid, vif->ssid, sizeof(old_ssid));
+	memcpy(old_bssid, vif->bssid, sizeof(old_bssid));
+	memset(vif->ssid, 0, sizeof(vif->ssid));
+	memcpy(vif->ssid, sme->ssid, sme->ssid_len);
+	vif->ssid_len = sme->ssid_len;
+	memset(vif->bssid, 0, sizeof(vif->bssid));
+	if (is_valid_ether_addr(con.bssid))
+		ether_addr_copy(vif->bssid, con.bssid);
+	vif->sm_state = SPRDWL_CONNECTING;
+	state_published = true;
+
+	ret = sprdwl_connect(vif->priv, vif->ctx_id, &con);
+	if (ret)
+		goto err;
+	wl_ndev_log(L_DBG, ndev, "%s %.*s\n", __func__, vif->ssid_len,
+		    vif->ssid);
 
 	return 0;
 err:
 	wl_ndev_log(L_ERR, ndev, "%s failed\n", __func__);
-	vif->sm_state = old_state;
+	if (state_published && vif->sm_state == SPRDWL_CONNECTING) {
+		vif->sm_state = old_state;
+		vif->ssid_len = old_ssid_len;
+		memcpy(vif->ssid, old_ssid, sizeof(vif->ssid));
+		memcpy(vif->bssid, old_bssid, sizeof(vif->bssid));
+	}
 #ifdef STA_SOFTAP_SCC_MODE
 	intf->sta_home_channel = 0;
 #endif
@@ -2604,15 +2624,6 @@ void sprdwl_report_connection(struct sprdwl_vif *vif,
 		wl_ndev_log(L_ERR, vif->ndev, "%s NULL BSSID!\n", __func__);
 		goto err;
 	}
-	if (!conn_info->req_ie_len) {
-		wl_ndev_log(L_ERR, vif->ndev, "%s No associate REQ IE!\n", __func__);
-		goto err;
-	}
-	if (!conn_info->resp_ie_len) {
-		wl_ndev_log(L_ERR, vif->ndev, "%s No associate RESP IE!\n", __func__);
-		goto err;
-	}
-
 	if (conn_info->bea_ie_len) {
 		if (!conn_info->bea_ie ||
 		    conn_info->bea_ie_len <
@@ -2620,7 +2631,7 @@ void sprdwl_report_connection(struct sprdwl_vif *vif,
 			wl_ndev_log(L_ERR, vif->ndev,
 				    "%s invalid beacon frame length %u\n",
 				    __func__, conn_info->bea_ie_len);
-			goto err;
+			goto lookup_bss;
 		}
 		wl_debug("%s channel num:%d\n", __func__, conn_info->channel);
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 7, 0)
@@ -2636,27 +2647,25 @@ void sprdwl_report_connection(struct sprdwl_vif *vif,
 		if (!channel) {
 			wl_err("%s invalid freq!channel num:%d\n", __func__,
 				conn_info->channel);
-			goto err;
+			goto lookup_bss;
 		}
 
 		mgmt = (struct ieee80211_mgmt *)conn_info->bea_ie;
-		wl_ndev_log(L_DBG, vif->ndev, "%s update BSS %s\n", __func__,
-			    vif->ssid);
-		if (!mgmt) {
-			wl_ndev_log(L_ERR, vif->ndev, "%s NULL frame!\n", __func__);
-			goto err;
-		}
+		wl_ndev_log(L_DBG, vif->ndev, "%s update BSS %.*s\n",
+			    __func__, vif->ssid_len, vif->ssid);
 		if (!ieee80211_is_beacon(mgmt->frame_control) &&
 		    !ieee80211_is_probe_resp(mgmt->frame_control)) {
 			wl_ndev_log(L_ERR, vif->ndev,
 				    "%s invalid beacon frame type 0x%04x\n",
 				    __func__, le16_to_cpu(mgmt->frame_control));
-			goto err;
+			goto lookup_bss;
 		}
-		if (!ether_addr_equal(conn_info->bssid, mgmt->bssid))
+		if (!ether_addr_equal(conn_info->bssid, mgmt->bssid)) {
 			wl_ndev_log(L_ERR, vif->ndev,
 				    "%s Invalid Beacon!,vif->bssid = %pM, con->bssid = %pM, mgmt->bssid = %pM\n",
 				    __func__, vif->bssid, conn_info->bssid, mgmt->bssid);
+			goto lookup_bss;
+		}
 		ie = mgmt->u.probe_resp.variable;
 		ielen = conn_info->bea_ie_len - offsetof(struct ieee80211_mgmt,
 						 u.probe_resp.variable);
@@ -2681,9 +2690,10 @@ void sprdwl_report_connection(struct sprdwl_vif *vif,
 				   "%s failed to inform bss frame!\n",
 				   __func__);
 	} else {
-		wl_ndev_log(L_ERR, vif->ndev, "%s No Beason IE!\n", __func__);
+		wl_ndev_log(L_DBG, vif->ndev, "%s No Beacon IE\n", __func__);
 	}
 
+lookup_bss:
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 7, 0)
 	/*
 	 * cfg80211 processes connect and roam events asynchronously. Keep the
