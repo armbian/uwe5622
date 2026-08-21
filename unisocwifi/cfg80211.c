@@ -2669,6 +2669,40 @@ void sprdwl_report_connection(struct sprdwl_vif *vif,
 		wl_ndev_log(L_ERR, vif->ndev, "%s No Beason IE!\n", __func__);
 	}
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 7, 0)
+	/*
+	 * cfg80211 processes connect and roam events asynchronously. Keep the
+	 * exact target BSS alive until it consumes the event instead of making
+	 * it look the entry up again from the scan cache by BSSID.
+	 */
+	if ((state == SPRDWL_CONNECTING &&
+	     (conn_info->status == SPRDWL_CONNECT_SUCCESS ||
+	      conn_info->status == SPRDWL_ROAM_SUCCESS)) ||
+	    (state == SPRDWL_CONNECTED &&
+	     conn_info->status == SPRDWL_ROAM_SUCCESS)) {
+		if (bss && !ether_addr_equal(bss->bssid, conn_info->bssid)) {
+			wl_ndev_log(L_WARN, vif->ndev,
+				    "%s ignoring beacon BSS %pM for connection to %pM\n",
+				    __func__, bss->bssid, conn_info->bssid);
+			cfg80211_put_bss(wiphy, bss);
+			bss = NULL;
+		}
+
+		if (!bss)
+			bss = cfg80211_get_bss(wiphy, NULL, conn_info->bssid,
+					       vif->ssid, vif->ssid_len,
+					       IEEE80211_BSS_TYPE_ESS,
+					       IEEE80211_PRIVACY_ANY);
+
+		if (!bss) {
+			wl_ndev_log(L_ERR, vif->ndev,
+				    "%s no BSS for successful connection to %pM\n",
+				    __func__, conn_info->bssid);
+			goto err;
+		}
+	}
+#endif
+
 	/*
 	 * Firmware may report ROAM_SUCCESS for a successful association while
 	 * cfg80211 still has a connect request pending. Select the cfg80211
@@ -2681,22 +2715,35 @@ void sprdwl_report_connection(struct sprdwl_vif *vif,
 			wl_ndev_log(L_WARN, vif->ndev,
 				    "%s treating roam success as connect success\n",
 				    __func__);
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 11, 0)
+		cfg80211_connect_bss(vif->ndev, conn_info->bssid, bss,
+				     conn_info->req_ie, conn_info->req_ie_len,
+				     conn_info->resp_ie, conn_info->resp_ie_len,
+				     WLAN_STATUS_SUCCESS, GFP_KERNEL,
+				     NL80211_TIMEOUT_UNSPECIFIED);
+		/* cfg80211_connect_bss() consumes the BSS reference. */
+		bss = NULL;
+#elif LINUX_VERSION_CODE >= KERNEL_VERSION(4, 7, 0)
+		cfg80211_connect_bss(vif->ndev, conn_info->bssid, bss,
+				     conn_info->req_ie, conn_info->req_ie_len,
+				     conn_info->resp_ie, conn_info->resp_ie_len,
+				     WLAN_STATUS_SUCCESS, GFP_KERNEL);
+		/* cfg80211_connect_bss() consumes the BSS reference. */
+		bss = NULL;
+#else
 		cfg80211_connect_result(vif->ndev,
 					conn_info->bssid, conn_info->req_ie, conn_info->req_ie_len,
 					conn_info->resp_ie, conn_info->resp_ie_len,
 					WLAN_STATUS_SUCCESS, GFP_KERNEL);
+#endif
 	} else if (state == SPRDWL_CONNECTED &&
 		   conn_info->status == SPRDWL_ROAM_SUCCESS) {
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
 		struct cfg80211_roam_info roam_info = {
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 1, 0)
 			.links[0].bss = bss,
-			.links[0].bssid = bss ? NULL : conn_info->bssid,
-			.links[0].channel = bss ? NULL : channel,
 #else
 			.bss = bss,
-			.bssid = bss ? NULL : conn_info->bssid,
-			.channel = bss ? NULL : channel,
 #endif
 			.req_ie = conn_info->req_ie,
 			.req_ie_len = conn_info->req_ie_len,
