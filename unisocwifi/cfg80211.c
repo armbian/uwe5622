@@ -2568,9 +2568,10 @@ void sprdwl_report_connection(struct sprdwl_vif *vif,
 {
 	struct sprdwl_priv *priv = vif->priv;
 	struct wiphy *wiphy = priv->wiphy;
-	struct ieee80211_channel *channel;
+	struct ieee80211_channel *channel = NULL;
 	struct ieee80211_mgmt *mgmt;
 	struct cfg80211_bss *bss = NULL;
+	enum sm_state state = vif->sm_state;
 #ifdef WMMAC_WFA_CERTIFICATION
 	struct wmm_params_element *wmm_params;
 	int i;
@@ -2584,8 +2585,7 @@ void sprdwl_report_connection(struct sprdwl_vif *vif,
 	struct sprdwl_intf *intf = (struct sprdwl_intf *)vif->priv->hw_priv;
 #endif
 
-	if (vif->sm_state != SPRDWL_CONNECTING &&
-	    vif->sm_state != SPRDWL_CONNECTED) {
+	if (state != SPRDWL_CONNECTING && state != SPRDWL_CONNECTED) {
 		wl_ndev_log(L_ERR, vif->ndev, "%s Unexpected event!\n", __func__);
 		return;
 	}
@@ -2669,20 +2669,34 @@ void sprdwl_report_connection(struct sprdwl_vif *vif,
 		wl_ndev_log(L_ERR, vif->ndev, "%s No Beason IE!\n", __func__);
 	}
 
-	if (vif->sm_state == SPRDWL_CONNECTING &&
-	    conn_info->status == SPRDWL_CONNECT_SUCCESS)
+	/*
+	 * Firmware may report ROAM_SUCCESS for a successful association while
+	 * cfg80211 still has a connect request pending. Select the cfg80211
+	 * notification from the host state instead of the firmware label.
+	 */
+	if (state == SPRDWL_CONNECTING &&
+	    (conn_info->status == SPRDWL_CONNECT_SUCCESS ||
+	     conn_info->status == SPRDWL_ROAM_SUCCESS)) {
+		if (conn_info->status == SPRDWL_ROAM_SUCCESS)
+			wl_ndev_log(L_WARN, vif->ndev,
+				    "%s treating roam success as connect success\n",
+				    __func__);
 		cfg80211_connect_result(vif->ndev,
 					conn_info->bssid, conn_info->req_ie, conn_info->req_ie_len,
 					conn_info->resp_ie, conn_info->resp_ie_len,
 					WLAN_STATUS_SUCCESS, GFP_KERNEL);
-	else if (vif->sm_state == SPRDWL_CONNECTED &&
-		 conn_info->status == SPRDWL_ROAM_SUCCESS){
+	} else if (state == SPRDWL_CONNECTED &&
+		   conn_info->status == SPRDWL_ROAM_SUCCESS) {
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
 		struct cfg80211_roam_info roam_info = {
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 1, 0)
 			.links[0].bss = bss,
+			.links[0].bssid = bss ? NULL : conn_info->bssid,
+			.links[0].channel = bss ? NULL : channel,
 #else
 			.bss = bss,
+			.bssid = bss ? NULL : conn_info->bssid,
+			.channel = bss ? NULL : channel,
 #endif
 			.req_ie = conn_info->req_ie,
 			.req_ie_len = conn_info->req_ie_len,
@@ -2694,9 +2708,11 @@ void sprdwl_report_connection(struct sprdwl_vif *vif,
 		cfg80211_roamed_bss(vif->ndev, bss, conn_info->req_ie, conn_info->req_ie_len,
 				    conn_info->resp_ie, conn_info->resp_ie_len, GFP_KERNEL);
 #endif
+		/* cfg80211_roamed() consumes the BSS reference. */
+		bss = NULL;
 	}
 #ifdef IBSS_SUPPORT
-	else if (vif->sm_state == SPRDWL_CONNECTED &&
+	else if (state == SPRDWL_CONNECTED &&
 		 (conn_info->status == SPRDWL_IBSS_JOIN ||
 		 conn_info->status == SPRDWL_IBSS_START)) {
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 7, 0)
@@ -2722,6 +2738,9 @@ void sprdwl_report_connection(struct sprdwl_vif *vif,
 			   __func__, vif->sm_state, conn_info->status);
 		goto err;
 	}
+
+	if (bss)
+		cfg80211_put_bss(wiphy, bss);
 
 	if (!netif_carrier_ok(vif->ndev)) {
 		netif_carrier_on(vif->ndev);
@@ -2749,23 +2768,32 @@ void sprdwl_report_connection(struct sprdwl_vif *vif,
 	vif->sm_state = SPRDWL_CONNECTED;
 	memcpy(vif->bssid, conn_info->bssid, sizeof(vif->bssid));
 	wl_ndev_log(L_DBG, vif->ndev, "%s %s to %s (%pM)\n", __func__,
-		    conn_info->status == SPRDWL_CONNECT_SUCCESS ?
+		    state == SPRDWL_CONNECTING ?
 			"connect" : "roam", vif->ssid, vif->bssid);
 	return;
 err:
+	if (bss)
+		cfg80211_put_bss(wiphy, bss);
 #ifdef STA_SOFTAP_SCC_MODE
-	intf->sta_home_channel = 0;
+	if (state == SPRDWL_CONNECTING)
+		intf->sta_home_channel = 0;
 #endif
 	if (status_code == WLAN_STATUS_SUCCESS)
 		status_code = WLAN_STATUS_UNSPECIFIED_FAILURE;
-	if (vif->sm_state == SPRDWL_CONNECTING)
-		cfg80211_connect_result(vif->ndev, vif->bssid, NULL, 0, NULL, 0,
-					status_code, GFP_KERNEL);
-
 	wl_ndev_log(L_ERR, vif->ndev, "%s %s failed status code:%d!\n",
 				__func__, vif->ssid, status_code);
-	memset(vif->bssid, 0, sizeof(vif->bssid));
-	memset(vif->ssid, 0, sizeof(vif->ssid));
+	if (state == SPRDWL_CONNECTING) {
+		cfg80211_connect_result(vif->ndev, vif->bssid, NULL, 0, NULL, 0,
+					status_code, GFP_KERNEL);
+		vif->sm_state = SPRDWL_DISCONNECTED;
+		memset(vif->bssid, 0, sizeof(vif->bssid));
+		memset(vif->ssid, 0, sizeof(vif->ssid));
+		vif->ssid_len = 0;
+		if (netif_carrier_ok(vif->ndev)) {
+			netif_carrier_off(vif->ndev);
+			netif_stop_queue(vif->ndev);
+		}
+	}
 }
 
 void sprdwl_report_disconnection(struct sprdwl_vif *vif, u16 reason_code)
