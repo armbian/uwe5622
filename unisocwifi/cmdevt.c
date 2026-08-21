@@ -2567,6 +2567,7 @@ unsigned short sprdwl_rx_rsp_process(struct sprdwl_priv *priv, u8 *msg)
 	if (hdr->common.ctx_id >= STAP_MODE_COEXI_NUM ||
 #endif
 		hdr->cmd_id > WIFI_CMD_MAX ||
+	    plen < sizeof(*hdr) ||
 	    plen > 2048) {
 		wl_err("%s wrong CMD_RSP: ctx_id:%d;cmd_id:%d\n",
 		       __func__, hdr->common.ctx_id,
@@ -2671,7 +2672,7 @@ static void sprdwl_event_connect(struct sprdwl_vif *vif, u8 *data, u16 len)
 {
 	u8 *pos = data;
 	u8 status_code = 0;
-	int left = len;
+	size_t left = len;
 	struct sprdwl_connect_info conn_info;
 #ifdef COMPAT_SAMPILE_CODE
 	u8 compat_ver = 0;
@@ -2698,11 +2699,15 @@ static void sprdwl_event_connect(struct sprdwl_vif *vif, u8 *data, u16 len)
 	/*init data struct*/
 	memset(&conn_info, 0, sizeof(conn_info));
 	/* the first byte is status code */
+	if (left < sizeof(conn_info.status))
+		goto malformed;
 	memcpy(&conn_info.status, pos, sizeof(conn_info.status));
 	if (conn_info.status != SPRDWL_CONNECT_SUCCESS &&
-	    conn_info.status != SPRDWL_ROAM_SUCCESS){
+	    conn_info.status != SPRDWL_ROAM_SUCCESS) {
 		/*Assoc response status code by set in the 3 byte if failure*/
-		memcpy(&status_code, pos+2, sizeof(status_code));
+		if (len < 3)
+			goto malformed;
+		memcpy(&status_code, data + 2, sizeof(status_code));
 		goto out;
 	}
 	pos += sizeof(conn_info.status);
@@ -2710,52 +2715,66 @@ static void sprdwl_event_connect(struct sprdwl_vif *vif, u8 *data, u16 len)
 
 	/* parse BSSID */
 	if (left < ETH_ALEN)
-		goto out;
+		goto malformed;
 	conn_info.bssid = pos;
 	pos += ETH_ALEN;
 	left -= ETH_ALEN;
 
 	/* get channel */
 	if (left < sizeof(conn_info.channel))
-		goto out;
+		goto malformed;
 	memcpy(&conn_info.channel, pos, sizeof(conn_info.channel));
 	pos += sizeof(conn_info.channel);
 	left -= sizeof(conn_info.channel);
 
 	/* get signal */
 	if (left < sizeof(conn_info.signal))
-		goto out;
+		goto malformed;
 	memcpy(&conn_info.signal, pos, sizeof(conn_info.signal));
 	pos += sizeof(conn_info.signal);
 	left -= sizeof(conn_info.signal);
 
 	/* parse REQ IE */
-	if (left < 0)
-		goto out;
-	memcpy(&conn_info.req_ie_len, pos, sizeof(conn_info.req_ie_len));
+	if (left < sizeof(conn_info.req_ie_len))
+		goto malformed;
+	conn_info.req_ie_len = get_unaligned_le16(pos);
 	pos += sizeof(conn_info.req_ie_len);
 	left -= sizeof(conn_info.req_ie_len);
+	if (conn_info.req_ie_len > left)
+		goto malformed;
 	conn_info.req_ie = pos;
 	pos += conn_info.req_ie_len;
 	left -= conn_info.req_ie_len;
 
 	/* parse RESP IE */
-	if (left < 0)
-		goto out;
-	memcpy(&conn_info.resp_ie_len, pos, sizeof(conn_info.resp_ie_len));
+	if (left < sizeof(conn_info.resp_ie_len))
+		goto malformed;
+	conn_info.resp_ie_len = get_unaligned_le16(pos);
 	pos += sizeof(conn_info.resp_ie_len);
 	left -= sizeof(conn_info.resp_ie_len);
+	if (conn_info.resp_ie_len > left)
+		goto malformed;
 	conn_info.resp_ie = pos;
 	pos += conn_info.resp_ie_len;
 	left -= conn_info.resp_ie_len;
 
 	/* parse BEA IE */
-	if (left < 0)
-		goto out;
-	memcpy(&conn_info.bea_ie_len, pos, sizeof(conn_info.bea_ie_len));
+	if (left < sizeof(conn_info.bea_ie_len))
+		goto malformed;
+	conn_info.bea_ie_len = get_unaligned_le16(pos);
 	pos += sizeof(conn_info.bea_ie_len);
 	left -= sizeof(conn_info.bea_ie_len);
+	if (conn_info.bea_ie_len > left)
+		goto malformed;
 	conn_info.bea_ie = pos;
+	goto out;
+
+malformed:
+	wl_ndev_log(L_ERR, vif->ndev,
+		    "%s malformed connect event: len %u, remaining %zu\n",
+		    __func__, len, left);
+	conn_info.status = U8_MAX;
+	status_code = WLAN_STATUS_UNSPECIFIED_FAILURE;
 out:
 	sprdwl_report_connection(vif, &conn_info, status_code);
 }
@@ -2764,7 +2783,13 @@ void sprdwl_event_disconnect(struct sprdwl_vif *vif, u8 *data, u16 len)
 {
 	u16 reason_code;
 
-	memcpy(&reason_code, data, sizeof(reason_code));
+	if (len < sizeof(reason_code)) {
+		wl_ndev_log(L_ERR, vif->ndev,
+			    "%s malformed disconnect event: len %u\n",
+			    __func__, len);
+		return;
+	}
+	reason_code = get_unaligned_le16(data);
 #ifdef SYNC_DISCONNECT
 	/*Report disconnection on version > 4.9.60, even though disconnect
 	 is from wpas, otherwise it returns -EALREADY on next connect.*/
@@ -3382,6 +3407,10 @@ unsigned short sprdwl_rx_event_process(struct sprdwl_priv *priv, u8 *msg)
 	}
 
 	plen = SPRDWL_GET_LE16(hdr->plen);
+	if (plen < sizeof(*hdr)) {
+		wl_err("%s invalid event length: %u\n", __func__, plen);
+		return 0;
+	}
 	if (!priv) {
 		wl_err("%s priv is NULL [%u]ctx_id %d recv[%s]len: %d\n",
 		       __func__, le32_to_cpu(hdr->mstime), ctx_id,

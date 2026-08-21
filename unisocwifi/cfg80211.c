@@ -2614,6 +2614,14 @@ void sprdwl_report_connection(struct sprdwl_vif *vif,
 	}
 
 	if (conn_info->bea_ie_len) {
+		if (!conn_info->bea_ie ||
+		    conn_info->bea_ie_len <
+		    offsetof(struct ieee80211_mgmt, u.probe_resp.variable)) {
+			wl_ndev_log(L_ERR, vif->ndev,
+				    "%s invalid beacon frame length %u\n",
+				    __func__, conn_info->bea_ie_len);
+			goto err;
+		}
 		wl_debug("%s channel num:%d\n", __func__, conn_info->channel);
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 7, 0)
 		freq = ieee80211_channel_to_frequency(conn_info->channel,
@@ -2636,6 +2644,13 @@ void sprdwl_report_connection(struct sprdwl_vif *vif,
 			    vif->ssid);
 		if (!mgmt) {
 			wl_ndev_log(L_ERR, vif->ndev, "%s NULL frame!\n", __func__);
+			goto err;
+		}
+		if (!ieee80211_is_beacon(mgmt->frame_control) &&
+		    !ieee80211_is_probe_resp(mgmt->frame_control)) {
+			wl_ndev_log(L_ERR, vif->ndev,
+				    "%s invalid beacon frame type 0x%04x\n",
+				    __func__, le16_to_cpu(mgmt->frame_control));
 			goto err;
 		}
 		if (!ether_addr_equal(conn_info->bssid, mgmt->bssid))
