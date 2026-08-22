@@ -75,6 +75,7 @@
 #define SPRDWL_11V_ALL_FEATURE          0xFFFF
 
 extern unsigned int wfa_cap;
+extern unsigned int disable_powersave;
 enum SPRDWL_CMD_LIST {
 	WIFI_CMD_MIN = 0,
 	WIFI_CMD_ERR = WIFI_CMD_MIN,

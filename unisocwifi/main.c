@@ -1658,6 +1658,10 @@ unsigned int wfa_cap;
 module_param(wfa_cap, uint, 0000);
 MODULE_PARM_DESC(wfa_cap, "set capability for WFA test");
 
+unsigned int disable_powersave;
+module_param(disable_powersave, uint, 0000);
+MODULE_PARM_DESC(disable_powersave, "Disable firmware power save mode (0=default, 1=ignore EVENT_PWR_DOWN)");
+
 unsigned int tcp_ack_drop_cnt = SPRDWL_TCP_ACK_DROP_CNT;
 /* Maybe you need S_IRUGO | S_IWUSR for debug */
 module_param(tcp_ack_drop_cnt, uint, 0000);

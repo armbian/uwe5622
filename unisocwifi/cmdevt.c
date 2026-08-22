@@ -3257,6 +3257,11 @@ static void sprdwl_event_fw_power_down(struct sprdwl_vif *vif, u8 *data, u16 len
 {
 	struct sprdwl_work *misc_work;
 
+	/* When power down is disabled in kernel option, silently ignore
+	 * the firmware's sleep request like we don't know the command. */
+	if (disable_powersave)
+		return;
+
 	misc_work = sprdwl_alloc_work(0);
 	if (!misc_work) {
 		wl_err("%s out of memory\n", __func__);
