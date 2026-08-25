@@ -2521,7 +2521,7 @@ static int marlin_start_run(void)
 	return ret;
 }
 
-#if IS_ENABLED(CONFIG_AW_BIND_VERIFY)
+#if IS_ENABLED(CONFIG_AW_BIND_VERIFY) || IS_ENABLED(CONFIG_RK_WIFI_DEVICE_UWE5622)
 #include <crypto/sha2.h>
 
 static void expand_seed(u8 *seed, u8 *out)
@@ -2648,7 +2648,7 @@ static int check_cp_ready(void)
 				marlin_dev->sync_f.prj_type);
 		if (marlin_dev->sync_f.init_status == SYNC_ALL_FINISHED)
 			i = 0;
-#if IS_ENABLED(CONFIG_AW_BIND_VERIFY)
+#if IS_ENABLED(CONFIG_AW_BIND_VERIFY) || IS_ENABLED(CONFIG_RK_WIFI_DEVICE_UWE5622)
 		else if (marlin_dev->sync_f.init_status ==
 			SYNC_VERIFY_WAITING) {
 			ret = marlin_bind_verify();
