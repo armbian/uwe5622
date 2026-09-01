@@ -1008,11 +1008,11 @@ int sprdwl_pmksa(struct sprdwl_priv *priv, u8 vif_ctx_id, const u8 *bssid,
 int sprdwl_remain_chan(struct sprdwl_priv *priv, u8 vif_ctx_id,
 		       struct ieee80211_channel *channel,
 		       enum nl80211_channel_type channel_type,
-		       u32 duration, u64 *cookie);
+		       u32 duration, u64 cookie);
 int sprdwl_cancel_remain_chan(struct sprdwl_priv *priv, u8 vif_ctx_id,
 			      u64 cookie);
 int sprdwl_tx_mgmt(struct sprdwl_priv *priv, u8 vif_ctx_id, u8 channel,
-		   u8 dont_wait_for_ack, u32 wait, u64 *cookie,
+		   u8 dont_wait_for_ack, u32 wait, u64 cookie,
 		   const u8 *mac, size_t mac_len);
 int sprdwl_register_frame(struct sprdwl_priv *priv, u8 vif_ctx_id, u16 type,
 			  u8 reg);
