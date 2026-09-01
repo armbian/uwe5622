@@ -1766,7 +1766,7 @@ int sprdwl_del_tx_ts(struct sprdwl_priv *priv, u8 vif_ctx_id, u8 tsid,
 int sprdwl_remain_chan(struct sprdwl_priv *priv, u8 vif_ctx_id,
 		       struct ieee80211_channel *channel,
 		       enum nl80211_channel_type channel_type,
-		       u32 duration, u64 *cookie)
+		       u32 duration, u64 cookie)
 {
 	struct sprdwl_msg_buf *msg;
 	struct sprdwl_cmd_remain_chan *p;
@@ -1779,7 +1779,7 @@ int sprdwl_remain_chan(struct sprdwl_priv *priv, u8 vif_ctx_id,
 	p->chan = ieee80211_frequency_to_channel(channel->center_freq);
 	p->chan_type = channel_type;
 	p->duraion = cpu_to_le32(duration);
-	p->cookie = cpu_to_le64(*cookie);
+	p->cookie = cpu_to_le64(cookie);
 
 	return sprdwl_cmd_send_recv(priv, msg, CMD_WAIT_TIMEOUT, NULL, NULL);
 }
@@ -1827,7 +1827,7 @@ static int sprdwl_tx_data(struct sprdwl_priv *priv, u8 vif_ctx_id, u8 channel,
 #endif
 
 int sprdwl_tx_mgmt(struct sprdwl_priv *priv, u8 vif_ctx_id, u8 channel,
-		   u8 dont_wait_for_ack, u32 wait, u64 *cookie,
+		   u8 dont_wait_for_ack, u32 wait, u64 cookie,
 		   const u8 *buf, size_t len)
 {
 	struct sprdwl_msg_buf *msg;
@@ -1843,8 +1843,7 @@ int sprdwl_tx_mgmt(struct sprdwl_priv *priv, u8 vif_ctx_id, u8 channel,
 	p->chan = channel;
 	p->dont_wait_for_ack = dont_wait_for_ack;
 	p->wait = cpu_to_le32(wait);
-	if (cookie)
-		p->cookie = cpu_to_le64(*cookie);
+	p->cookie = cpu_to_le64(cookie);
 	p->len = cpu_to_le16(len);
 	memcpy(p->value, buf, len);
 
