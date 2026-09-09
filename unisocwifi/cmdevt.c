@@ -681,7 +681,7 @@ int sprdwl_sync_version(struct sprdwl_priv *priv)
 	struct sprdwl_cmd_api_t *drv_api = NULL;
 	struct sprdwl_cmd_api_t *fw_api = NULL;
 	u16 r_len = sizeof(*fw_api);
-	u8 r_buf[r_len];
+	u8 r_buf[sizeof(*fw_api)];
 	int ret = 0;
 
 	msg = sprdwl_cmd_getbuf(priv, sizeof(struct sprdwl_cmd_api_t),
@@ -821,7 +821,7 @@ int sprdwl_get_fw_info(struct sprdwl_priv *priv)
 	struct sprdwl_tlv_data *tlv;
 	u16 r_len = sizeof(*p) + GET_INFO_TLV_RBUF_SIZE;
 	u16 r_len_ori = r_len;
-	u8 r_buf[r_len];
+	u8 r_buf[sizeof(*p) + GET_INFO_TLV_RBUF_SIZE];
 	u8 compat_ver = 0;
 	unsigned int len_count = 0;
 	bool b_tlv_data_chk = true;
