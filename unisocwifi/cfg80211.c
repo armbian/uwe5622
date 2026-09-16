@@ -45,7 +45,20 @@
 #include "qos.h"
 #endif
 
-#if !defined(CONFIG_CFG80211_INTERNAL_REGDB) || defined(CUSTOM_REGDOMAIN)
+/*
+ * Regulatory source. CONFIG_CFG80211_INTERNAL_REGDB was removed in Linux
+ * 4.15: cfg80211 now loads regulatory.db itself, so the vendor's seven-entry
+ * country table in reg_domain.c (which silently maps every other alpha2,
+ * e.g. FR/DE/GB, onto the "00" world domain and never reflects the result
+ * back to the wiphy) is neither needed nor correct. Let cfg80211 own the
+ * domain and just relay the resulting rules to the firmware.
+ */
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 15, 0) && !defined(CUSTOM_REGDOMAIN)
+#define SPRDWL_CFG80211_REGDB 1
+#endif
+
+#if !defined(SPRDWL_CFG80211_REGDB) && \
+	(!defined(CONFIG_CFG80211_INTERNAL_REGDB) || defined(CUSTOM_REGDOMAIN))
 #include "reg_domain.h"
 #endif
 
@@ -3783,12 +3796,39 @@ static void sprdwl_save_ch_info(struct sprdwl_priv *priv, u32 band, u32 flags, i
 
 }
 
-#if defined(CONFIG_CFG80211_INTERNAL_REGDB) && !defined(CUSTOM_REGDOMAIN)
+/*
+ * The firmware's WIFI_CMD_SET_REGDOM payload is an array of
+ * struct unisoc_reg_rule (freq_range, power_rule, flags, dfs_cac_ms).
+ * Since Linux 4.18 struct ieee80211_reg_rule also carries wmm_rule (and,
+ * later, psd), so memcpy()ing the kernel struct both over-sizes the payload
+ * and lands WMM parameters where the firmware reads flags/dfs_cac_ms. Copy
+ * the four fields explicitly, and mask flags to the bits that existed when
+ * this firmware ABI was defined (NL80211_RRF_NO_160MHZ is bit 16).
+ */
+#define SPRDWL_FW_REG_RULE_FLAGS	GENMASK(16, 0)
+
+static void sprdwl_fill_reg_rule(struct sprdwl_ieee80211_regdomain *rd, u32 i,
+				 const struct ieee80211_reg_rule *reg_rule)
+{
+	rd->reg_rules[i].freq_range = reg_rule->freq_range;
+	rd->reg_rules[i].power_rule = reg_rule->power_rule;
+	rd->reg_rules[i].flags = reg_rule->flags & SPRDWL_FW_REG_RULE_FLAGS;
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 15, 0)
+	rd->reg_rules[i].dfs_cac_ms = reg_rule->dfs_cac_ms;
+#else
+	rd->reg_rules[i].dfs_cac_ms = 0;
+#endif
+}
+
+#if defined(SPRDWL_CFG80211_REGDB) || \
+	(defined(CONFIG_CFG80211_INTERNAL_REGDB) && !defined(CUSTOM_REGDOMAIN))
 static void sprdwl_reg_notify(struct wiphy *wiphy,
 			      struct regulatory_request *request)
 {
 	struct sprdwl_priv *priv = wiphy_priv(wiphy);
+#ifdef STA_SOFTAP_SCC_MODE
 	struct sprdwl_intf *intf = (struct sprdwl_intf *)priv->hw_priv;
+#endif
 	struct ieee80211_supported_band *sband;
 	struct ieee80211_channel *chan;
 	const struct ieee80211_freq_range *freq_range;
@@ -3837,8 +3877,7 @@ static void sprdwl_reg_notify(struct wiphy *wiphy,
 		}
 	}
 
-	rd_size = sizeof(struct sprdwl_ieee80211_regdomain) +
-	    n_rules * sizeof(struct ieee80211_reg_rule);
+	rd_size = sizeof(*rd) + n_rules * sizeof(rd->reg_rules[0]);
 
 	rd = kzalloc(rd_size, GFP_KERNEL);
 	if (!rd) {
@@ -3880,8 +3919,7 @@ static void sprdwl_reg_notify(struct wiphy *wiphy,
 			    i < n_rules) {
 				last_start_freq = freq_range->start_freq_khz;
 
-				memcpy(&rd->reg_rules[i], reg_rule,
-				       sizeof(struct ieee80211_reg_rule));
+				sprdwl_fill_reg_rule(rd, i, reg_rule);
 				i++;
 
 				wl_info(
@@ -3980,12 +4018,7 @@ static void sprdwl_reg_notify(struct wiphy *wiphy,
 		}
 	}
 
-	rd_size = sizeof(struct sprdwl_ieee80211_regdomain) +
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 15, 0))
-	    n_rules * sizeof(struct ieee80211_reg_rule);
-#else
-	    n_rules * sizeof(struct unisoc_reg_rule);
-#endif
+	rd_size = sizeof(*rd) + n_rules * sizeof(rd->reg_rules[0]);
 
 	rd = kzalloc(rd_size, GFP_KERNEL);
 	if (!rd) {
@@ -4028,11 +4061,7 @@ static void sprdwl_reg_notify(struct wiphy *wiphy,
 			    i < n_rules) {
 				last_start_freq = freq_range->start_freq_khz;
 
-				memcpy(&rd->reg_rules[i], reg_rule,
-				       sizeof(struct ieee80211_reg_rule));
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(3, 15, 0))
-				rd->reg_rules[i].dfs_cac_ms = 0;
-#endif
+				sprdwl_fill_reg_rule(rd, i, reg_rule);
 				i++;
 
 				wiphy_dbg(wiphy,
@@ -4094,7 +4123,8 @@ void sprdwl_setup_wiphy(struct wiphy *wiphy, struct sprdwl_priv *priv)
 	struct wiphy_sec2_t *sec2 = NULL;
 	struct ieee80211_sta_vht_cap *vht_info = NULL;
 	struct ieee80211_sta_ht_cap *ht_info = NULL;
-#if !defined (CONFIG_CFG80211_INTERNAL_REGDB) || defined(CUSTOM_REGDOMAIN)
+#if !defined(SPRDWL_CFG80211_REGDB) && \
+	(!defined(CONFIG_CFG80211_INTERNAL_REGDB) || defined(CUSTOM_REGDOMAIN))
 	const struct ieee80211_regdomain *pRegdom;
 	char alpha2[2];
 #endif
@@ -4245,7 +4275,8 @@ void sprdwl_setup_wiphy(struct wiphy *wiphy, struct sprdwl_priv *priv)
 		wl_info("\tIEEE802.11d supported\n");
 		wiphy->reg_notifier = sprdwl_reg_notify;
 
-#if !defined (CONFIG_CFG80211_INTERNAL_REGDB) || defined(CUSTOM_REGDOMAIN)
+#if !defined(SPRDWL_CFG80211_REGDB) && \
+	(!defined(CONFIG_CFG80211_INTERNAL_REGDB) || defined(CUSTOM_REGDOMAIN))
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 14, 0))
 		wiphy->regulatory_flags |= REGULATORY_CUSTOM_REG;
 #else
