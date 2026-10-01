@@ -60,7 +60,39 @@ Supported kernel versions include:
 
 ## Building
 
-The driver is designed to be automatically build and included in images created with the Armbian Build Framework. Building/installing out of tree on a running system may work, though no instructions can be provided for doing so since entirely untested.
+### In an Armbian image
+
+The driver is built automatically and included in images created with the Armbian
+Build Framework.
+
+### Out of tree with DKMS
+
+A `dkms.conf` is provided, so the driver can be built against the kernel the
+system is actually running and reinstalled automatically on kernel updates:
+
+```sh
+sudo apt install dkms
+sudo cp -r . /usr/src/uwe5622-1.0
+sudo dkms add -m uwe5622 -v 1.0
+sudo dkms install -m uwe5622 -v 1.0
+```
+
+This builds and installs `uwe5622_bsp_sdio`, `sprdwl_ng` and `sprdbt_tty` under
+`/lib/modules/$(uname -r)/updates/dkms/`, and runs `depmod`.
+
+Notes:
+
+* The default `dkms.conf` builds the **Allwinner** variant
+  (`CONFIG_AW_WIFI_DEVICE_UWE5622=y`). On Rockchip boards replace it with
+  `CONFIG_RK_WIFI_DEVICE_UWE5622=y` in `MAKE[0]`.
+* DKMS only provides the kernel modules. The **device tree** has to describe the
+  chip already (the SDIO bus and the `mmc-pwrseq` that powers/resets it, plus the
+  `uwe-bsp` node when the driver is built with `CONFIG_WCN_PARSE_DTS`), and the
+  **firmware** has to be in place — see below.
+* Verified with DKMS 3.2.2: builds against Linux 7.2 and installs correctly
+  (cross-built for arm64, so `strip` warns about the architecture; a native build
+  on the board does not).
+
 
 ## Platform Support
 
@@ -72,9 +104,18 @@ Tested on:
 
 ## Firmware
 
-Required firmware files should be placed in `/lib/firmware/uwe5622/`:
-- `wcnmodem.bin` - Main firmware binary
+The WCN core looks for `wcnmodem.bin` in `/lib/firmware/uwe5622/` first and in
+`/lib/firmware/` as a fallback: the first path comes from `UNISOC_FW_PATH_CONFIG`
+in the top-level Makefile, the second is the hardcoded entry in
+`unisocwcn/platform/wcn_boot.c`. Either location works, and the firmware shipped
+with the boards is normally in `/lib/firmware/`:
+
+- `wcnmodem.bin` - main firmware binary
 - `nvm.bin` - NV configuration
+
+The WiFi driver additionally reads its per-board configuration
+(`wifi_2355b001_1ant.ini` and similar) from the default firmware path, so
+`/lib/firmware/` is the location that covers both.
 
 ## Contributing
 
