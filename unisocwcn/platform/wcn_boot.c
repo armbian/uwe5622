@@ -37,6 +37,7 @@
 #include <linux/workqueue.h>
 #include <marlin_platform.h>
 #include <wcn_bus.h>
+#include <wcn_fs.h>
 
 #include "wcn_gnss.h"
 #include "rf/rf.h"
@@ -611,7 +612,7 @@ static int marlin_find_sdio_device_id(unsigned char *path)
 
 	sprintf(sdio_id_path, path);
 	for (i = 0; i < open_cnt; i++) {
-		filp = filp_open(sdio_id_path, O_RDONLY, 0644);
+		filp = wcn_filp_open(sdio_id_path, O_RDONLY, 0644);
 		if (IS_ERR(filp))
 			msleep(100);
 		else
@@ -713,7 +714,7 @@ static int marlin_tsx_cali_data_read(struct tsx_data *p_tsx_data)
 	loff_t offset = 0;
 	char *pdata;
 
-	file = filp_open(WCN_AFC_CALI_PATH, O_RDONLY, 0);
+	file = wcn_filp_open(WCN_AFC_CALI_PATH, O_RDONLY, 0);
 	if (IS_ERR(file)) {
 		WCN_ERR("open file error\n");
 		return -1;
@@ -930,13 +931,13 @@ static char *load_firmware_data_path(const char *path, loff_t offset,
 	struct file *file;
 
 	WCN_DEBUG("%s Enter\n", __func__);
-	file = filp_open(path, O_RDONLY, 0);
+	file = wcn_filp_open(path, O_RDONLY, 0);
 	for (i = 1; i <= opn_num_max; i++) {
 		if (IS_ERR(file)) {
 			WCN_DEBUG("%s: try open file %s,count_num:%d\n",
 				  __func__, path, i);
 			ssleep(1);
-			file = filp_open(path, O_RDONLY, 0);
+			file = wcn_filp_open(path, O_RDONLY, 0);
 		} else
 			break;
 	}

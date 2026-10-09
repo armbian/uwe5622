@@ -22,6 +22,7 @@
 #include <linux/types.h>
 #include <linux/version.h>
 #include <marlin_platform.h>
+#include <wcn_fs.h>
 
 #include "sprdwl.h"
 #include "npi.h"
@@ -41,7 +42,7 @@ static int sprdwl_get_flag(void)
 	char file_data[2];
 	unsigned long long tmp;
 
-	fp = filp_open(SPRDWL_PSM_PATH, O_RDONLY, 0);
+	fp = wcn_filp_open(SPRDWL_PSM_PATH, O_RDONLY, 0);
 	if (IS_ERR(fp)) {
 		wl_err("open file:%s failed\n", SPRDWL_PSM_PATH);
 		return PTR_ERR(fp);

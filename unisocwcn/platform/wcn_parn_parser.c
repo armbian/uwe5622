@@ -32,6 +32,7 @@
 #include <linux/unistd.h>
 #include <linux/uaccess.h>
 #include <linux/version.h>
+#include <wcn_fs.h>
 #include <linux/vmalloc.h>
 #include <linux/version.h>
 
@@ -105,7 +106,7 @@ static int load_fstab_conf(const char *p_path, char *WCN_PATH)
 	p = line;
 	WCN_INFO("Attempt to load conf from %s\n", p_path);
 
-	p_file = filp_open(p_path, O_RDONLY, 0);
+	p_file = wcn_filp_open(p_path, O_RDONLY, 0);
 	if (IS_ERR(p_file)) {
 		WCN_ERR("open file %s error not find\n",
 			p_path);
@@ -186,7 +187,7 @@ int parse_firmware_path(char *firmware_path)
 	for (loop = 0; loop < FSTAB_PATH_NUM; loop++) {
 		file1 = NULL;
 		WCN_DEBUG("dir:%s: loop:%d\n", fstab_dir[loop], loop);
-		file1 = filp_open(fstab_dir[loop], O_DIRECTORY, 0);
+		file1 = wcn_filp_open(fstab_dir[loop], O_DIRECTORY, 0);
 		if (IS_ERR(file1)) {
 			WCN_ERR("%s open error:%d\n",
 				fstab_dir[loop], (int)IS_ERR(file1));

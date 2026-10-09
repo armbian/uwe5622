@@ -16,6 +16,7 @@
 #include <linux/vmalloc.h>
 #include <linux/ktime.h>
 #include <wcn_bus.h>
+#include <wcn_fs.h>
 
 #include "sdiohal.h"
 
@@ -629,7 +630,7 @@ static char *sdiohal_firmware_data(unsigned long int imag_size)
 	loff_t pos = 0;
 
 	sdiohal_info("%s entry\n", __func__);
-	file = filp_open(FIRMWARE_PATH, O_RDONLY, 0);
+	file = wcn_filp_open(FIRMWARE_PATH, O_RDONLY, 0);
 	if (IS_ERR(file)) {
 		sdiohal_err("%s open file %s error\n",
 			    FIRMWARE_PATH, __func__);

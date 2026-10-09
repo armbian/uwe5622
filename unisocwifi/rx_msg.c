@@ -24,6 +24,7 @@
 #include "wl_intf.h"
 #include "tx_msg.h"
 #include <net/ip6_checksum.h>
+#include <wcn_fs.h>
 #include "debug.h"
 #include "tcp_ack.h"
 
@@ -392,7 +393,7 @@ int sprdwl_pkt_log_save(struct sprdwl_intf *intf, void *data)
 	/*for pkt log txt line number and write pkt log into file*/
 	char temphdr[6], tempdata[3];
 
-	intf->pfile = filp_open(
+	intf->pfile = wcn_filp_open(
 					"storage/sdcard0/Download/sprdwl_pkt_log.txt",
 					O_CREAT | O_RDWR, 0);
 	if (IS_ERR(intf->pfile)) {
