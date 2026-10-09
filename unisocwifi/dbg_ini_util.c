@@ -3,6 +3,7 @@
 #include <linux/fs.h>
 #include <linux/uaccess.h>
 #include <linux/mm.h>
+#include <wcn_fs.h>
 
 #include "wl_core.h"
 #include "dbg_ini_util.h"
@@ -24,7 +25,7 @@ static int dbg_load_ini_resource(char *path[], char *buf, int size)
 	struct file *filp = (struct file *)-ENOENT;
 
 	for (index = 0; index < MAX_PATH_NUM; index++) {
-		filp = filp_open(path[index], O_RDONLY, S_IRUSR);
+		filp = wcn_filp_open(path[index], O_RDONLY, S_IRUSR);
 		if (!IS_ERR(filp)) {
 			pr_info("find wifi_dbg.ini file in %s\n", path[index]);
 			break;

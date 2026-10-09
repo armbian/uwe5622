@@ -20,6 +20,7 @@
 
 #include <linux/file.h>
 #include <linux/string.h>
+#include <wcn_fs.h>
 #include "woble.h"
 #include "tty.h"
 
@@ -129,7 +130,7 @@ int mtty_bt_read_conf(void)
 	loff_t file_size = 0;
 	loff_t file_offset = 0;
 	memset(bt_wake_dev_db, 0, sizeof(mtty_bt_wake_t) * MAX_WAKE_DEVICE_MAX_NUM);
-	bt_conf_fp = filp_open(CONFIG_FILE_PATH, O_RDONLY, 0);
+	bt_conf_fp = wcn_filp_open(CONFIG_FILE_PATH, O_RDONLY, 0);
 	if (IS_ERR(bt_conf_fp)) {
 		pr_info("%s open file %s error %ld \n",
 				__func__, CONFIG_FILE_PATH, PTR_ERR(bt_conf_fp));

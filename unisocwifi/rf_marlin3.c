@@ -14,6 +14,7 @@
 #include "rf_marlin3.h"
 #include <linux/version.h>
 #include <wcn_bus.h>
+#include <wcn_fs.h>
 #include <marlin_platform.h>
 
 #include "sprdwl.h"
@@ -412,7 +413,7 @@ static int wifi_nvm_parse(const char *path, void *p_data)
 #endif
 	int ret = 0;
 
-	file = filp_open(path, O_RDONLY, 0);
+	file = wcn_filp_open(path, O_RDONLY, 0);
 	if (IS_ERR(file)) {
 		pr_err("open file %s error\n", path);
 		return -1;

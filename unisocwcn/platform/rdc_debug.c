@@ -4,6 +4,7 @@
 #include <linux/version.h>
 #include <linux/vmalloc.h>
 #include <marlin_platform.h>
+#include <wcn_fs.h>
 
 #include "mdbg_type.h"
 #include "rdc_debug.h"
@@ -82,7 +83,7 @@ static int wcn_mkdir(char *path)
 	struct file *fp;
 
 	/* check if the new dir is created. */
-	fp = filp_open(path, O_DIRECTORY, 0644);
+	fp = wcn_filp_open(path, O_DIRECTORY, 0644);
 	if (IS_ERR(fp)) {
 		WCN_INFO("open %s error!\n", path);
 		return -1;
@@ -109,7 +110,7 @@ static int wcn_find_cp2_file_num(char *path, loff_t *pos)
 	if (wcn_cp2_log_cover_old) {
 		for (i = 0; i < wcn_cp2_file_max_num; i++) {
 			sprintf(wcn_cp2_file_path, path, i);
-			fp_size = filp_open(wcn_cp2_file_path, O_RDONLY, 0);
+			fp_size = wcn_filp_open(wcn_cp2_file_path, O_RDONLY, 0);
 			if (IS_ERR(fp_size)) {
 				WCN_INFO("%s: Error, config file not found. want config file:%s \n",
 					__func__, wcn_cp2_file_path);
@@ -137,7 +138,7 @@ static int wcn_find_cp2_file_num(char *path, loff_t *pos)
 				sprintf(wcn_cp2_file_path, path, 0);
 				WCN_INFO("%s: empty:%s\n", __func__,
 					wcn_cp2_file_path);
-				filp = filp_open(wcn_cp2_file_path,
+				filp = wcn_filp_open(wcn_cp2_file_path,
 					O_CREAT | O_RDWR | O_TRUNC, 0644);
 				if (IS_ERR(filp))
 					WCN_INFO("%s: can not empty:%s\n",
@@ -164,7 +165,7 @@ static int wcn_find_cp2_file_num(char *path, loff_t *pos)
 		num = 0;
 		*pos = 0;
 		sprintf(wcn_cp2_file_path, path, 0);
-		fp = filp_open(wcn_cp2_file_path,
+		fp = wcn_filp_open(wcn_cp2_file_path,
 			O_CREAT | O_RDWR | O_TRUNC, 0644);
 		if (IS_ERR(fp)) {
 			WCN_INFO("%s :%s file is not exit\n",
@@ -190,7 +191,8 @@ int log_rx_callback(void *addr, unsigned int len)
 		return 0;
 
 retry:
-	filp = filp_open(wcn_cp2_log_path, O_CREAT | O_RDWR | O_APPEND, 0644);
+	filp = wcn_filp_open(wcn_cp2_log_path,
+			     O_CREAT | O_RDWR | O_APPEND, 0644);
 	if (IS_ERR(filp)) {
 		if (retry > 0)
 			WCN_ERR("%s open %s error no.%ld retry:%d\n", __func__,
@@ -251,7 +253,7 @@ retry:
 
 		WCN_INFO("%s cp2 log file is %s\n", __func__,
 			 wcn_cp2_log_path);
-		filp = filp_open(wcn_cp2_log_path,
+		filp = wcn_filp_open(wcn_cp2_log_path,
 				 O_CREAT | O_RDWR | O_TRUNC, 0644);
 		if (IS_ERR(filp)) {
 			WCN_ERR("%s open wcn log file error no. %d\n",
@@ -291,10 +293,10 @@ int dumpmem_rx_callback(void *addr, unsigned int len)
 
 retry:
 	if (first_time_open)
-		filp = filp_open(wcn_cp2_mem_path,
+		filp = wcn_filp_open(wcn_cp2_mem_path,
 			O_CREAT | O_RDWR | O_TRUNC, 0644);
 	else
-		filp = filp_open(wcn_cp2_mem_path,
+		filp = wcn_filp_open(wcn_cp2_mem_path,
 			O_CREAT | O_RDWR | O_APPEND, 0644);
 	if (IS_ERR(filp)) {
 		if (retry > 0)
@@ -405,7 +407,7 @@ int wcn_set_log_file_path(char *path, unsigned int path_len)
 		wcn_cp2_mem_path_user_tmp, wcn_cp2_mem_num_user);
 
 	//check if the new path is valid.
-	filp = filp_open(wcn_cp2_log_path_user,
+	filp = wcn_filp_open(wcn_cp2_log_path_user,
 		O_CREAT | O_RDWR | O_APPEND, 0644);
 	if (IS_ERR(filp)) {
 		WCN_ERR("new path [%s] is invalid %d\n", wcn_cp2_log_path_user,
@@ -452,7 +454,8 @@ static void wcn_config_log_file(void)
 	int index = 0;
 
 	for (index = 0; index < WCN_DEBUG_CFG_MAX_PATH_NUM; index++) {
-		fp_size = filp_open(wcn_cp2_config_path[index], O_RDONLY, 0);
+		fp_size = wcn_filp_open(wcn_cp2_config_path[index],
+					 O_RDONLY, 0);
 		if (IS_ERR(fp_size)) {
 			WCN_INFO("%s: Error, config file not found. want config file:%s \n",
 				__func__, wcn_cp2_config_path[index]);
@@ -478,7 +481,7 @@ static void wcn_config_log_file(void)
 	}
 	buf_end = buf + config_size;
 
-	filp = filp_open(wcn_cp2_config_path[index], O_RDONLY, 0);
+	filp = wcn_filp_open(wcn_cp2_config_path[index], O_RDONLY, 0);
 	if (IS_ERR(filp)) {
 		WCN_ERR("%s: can not open log config file:%s\n",
 			__func__, wcn_cp2_config_path[index]);
