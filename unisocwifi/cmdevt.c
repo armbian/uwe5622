@@ -3630,7 +3630,7 @@ int sprdwl_set_packet_offload(struct sprdwl_priv *priv, u8 vif_ctx_id,
 	struct sprdwl_cmd_packet_offload *p;
 	struct sprdwl_cmd_packet_offload *packet = NULL;
 	u16 r_len = sizeof(*packet);
-	u8 r_buf[r_len];
+	u8 r_buf[sizeof(*packet)];
 
 	msg = sprdwl_cmd_getbuf(priv, sizeof(*p) + len, vif_ctx_id,
 				SPRDWL_HEAD_RSP, WIFI_CMD_PACKET_OFFLOAD);

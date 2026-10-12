@@ -593,7 +593,7 @@ static int sprdwl_vendor_clr_llstat_handler(struct wiphy *wiphy,
 	struct nlattr *tb[SPRDWL_LL_STATS_CLR_MAX + 1];
 	u32 *stats_clear_rsp_mask, stats_clear_req_mask = 0;
 	u16 r_len = sizeof(*stats_clear_rsp_mask);
-	u8 r_buf[r_len];
+	u8 r_buf[sizeof(*stats_clear_rsp_mask)];
 	u32 reply_length, ret, err;
 
 	struct sprdwl_priv *priv = wiphy_priv(wiphy);
