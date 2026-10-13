@@ -37,6 +37,9 @@ jobs:
           - board: orangepi3b
             branch: vendor
             family: rk35xx
+          - board: orangepi3b
+            branch: vendor-next
+            family: rk35xx
           - board: orangepizero2
             branch: legacy
             family: sunxi64
