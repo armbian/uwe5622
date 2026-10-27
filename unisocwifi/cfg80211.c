@@ -722,6 +722,10 @@ static int sprdwl_cfg80211_add_key(struct wiphy *wiphy, struct wireless_dev *wde
 {
 	struct sprdwl_vif *vif = netdev_priv(wdev->netdev);
 
+	if (key_index >= SPRDWL_NUM_KEY_SLOTS ||
+	    params->key_len > WLAN_MAX_KEY_LEN)
+		return -EINVAL;
+
 	vif->key_index[pairwise] = key_index;
 	vif->key_len[pairwise][key_index] = params->key_len;
 	memcpy(vif->key[pairwise][key_index], params->key, params->key_len);
@@ -744,6 +748,10 @@ static int sprdwl_cfg80211_add_key(struct wiphy *wiphy, struct net_device *ndev,
 {
 	struct sprdwl_vif *vif = netdev_priv(ndev);
 
+	if (key_index >= SPRDWL_NUM_KEY_SLOTS ||
+	    params->key_len > WLAN_MAX_KEY_LEN)
+		return -EINVAL;
+
 	vif->key_index[pairwise] = key_index;
 	vif->key_len[pairwise][key_index] = params->key_len;
 	memcpy(vif->key[pairwise][key_index], params->key, params->key_len);
@@ -765,6 +773,10 @@ static int sprdwl_cfg80211_add_key(struct wiphy *wiphy, struct net_device *ndev,
 				   struct key_params *params)
 {
 	struct sprdwl_vif *vif = netdev_priv(ndev);
+
+	if (key_index >= SPRDWL_NUM_KEY_SLOTS ||
+	    params->key_len > WLAN_MAX_KEY_LEN)
+		return -EINVAL;
 
 	vif->key_index[pairwise] = key_index;
 	vif->key_len[pairwise][key_index] = params->key_len;
@@ -2203,7 +2215,7 @@ static int sprdwl_cfg80211_connect(struct wiphy *wiphy, struct net_device *ndev,
 		u32 cipher = sme->crypto.cipher_group;
 
 		if (!sme->key || sme->key_len > WLAN_MAX_KEY_LEN ||
-		    sme->key_idx >= ARRAY_SIZE(vif->key[SPRDWL_GROUP])) {
+		    sme->key_idx > SPRDWL_MAX_KEY_INDEX) {
 			wl_ndev_log(L_ERR, ndev,
 				    "%s invalid key index %d or length %d\n",
 				    __func__, sme->key_idx, sme->key_len);
