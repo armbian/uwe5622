@@ -830,6 +830,8 @@ static int mtty_remove(struct platform_device *pdev)
 {
 	struct mtty_device *mtty = platform_get_drvdata(pdev);
 
+	/* Unregister first: its set_block callback must not run during teardown */
+	rfkill_bluetooth_remove(pdev);
 	mtty_tty_driver_exit(mtty);
 	sprdwcn_bus_chn_deinit(&bt_rx_ops);
 	sprdwcn_bus_chn_deinit(&bt_tx_ops);
