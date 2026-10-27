@@ -115,8 +115,10 @@ struct sprdwl_vif {
 	u8 prwise_crypto;
 	u8 grp_crypto;
 	u8 key_index[2];
-	u8 key[2][4][WLAN_MAX_KEY_LEN];
-	u8 key_len[2][4];
+	/* Indices 0-3 are GTK/WEP keys, 4-5 are IGTK (management frame protection) */
+#define SPRDWL_NUM_KEY_SLOTS	6
+	u8 key[2][SPRDWL_NUM_KEY_SLOTS][WLAN_MAX_KEY_LEN];
+	u8 key_len[2][SPRDWL_NUM_KEY_SLOTS];
 	unsigned long mgmt_reg;
 
 	/* P2P stuff */
