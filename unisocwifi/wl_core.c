@@ -33,11 +33,10 @@
 #include "dbg_ini_util.h"
 #include "tcp_ack.h"
 
-#ifdef WL_CONFIG_DEBUG
+/* Errors are logged by default; lower to 0 or raise for debugging. */
 int sprdwl_debug_level = L_ERR;
-#else
-int sprdwl_debug_level = L_NONE;
-#endif
+module_param_named(debug_level, sprdwl_debug_level, int, 0644);
+MODULE_PARM_DESC(debug_level, "Log level: 0=none, 1=error (default), 2=warn, 3=info, 4=debug");
 
 struct device *sprdwl_dev;
 static void adjust_debug_level(char *buf, unsigned char offset)
