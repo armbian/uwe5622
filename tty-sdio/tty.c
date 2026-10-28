@@ -26,9 +26,9 @@
 #include <linux/semaphore.h>
 #include <linux/vmalloc.h>
 #include <linux/atomic.h>
+#include <linux/of.h>
 #ifdef CONFIG_OF
 #include <linux/of_device.h>
-#include <linux/of.h>
 #endif
 #include <linux/compat.h>
 #include <linux/tty_flip.h>
@@ -872,23 +872,56 @@ static struct platform_driver mtty_driver = {
 
 #ifdef OTT_UWE
 static struct platform_device *mtty_pdev;
+
+static bool mtty_has_dt_node(void)
+{
+	struct device_node *np;
+	bool found = false;
+
+	for_each_compatible_node(np, NULL, "sprd,mtty") {
+		if (of_device_is_available(np)) {
+			found = true;
+			of_node_put(np);
+			break;
+		}
+	}
+	return found;
+}
+
 static int __init mtty_pdev_init(void)
 {
 	int ret;
+
 	ret = platform_driver_register(&mtty_driver);
-	if (!ret) {
-		mtty_pdev = platform_device_alloc("mtty", -1);
-		if (platform_device_add(mtty_pdev) != 0)
-			pr_err("register platform device unisoc mtty failed\n");
+	if (ret)
+		return ret;
+
+	/*
+	 * A "sprd,mtty" device-tree node already gives the driver its
+	 * device. Adding a second one would register ttyBT twice.
+	 */
+	if (mtty_has_dt_node())
+		return 0;
+
+	mtty_pdev = platform_device_alloc("mtty", -1);
+	if (!mtty_pdev) {
+		pr_err("allocate platform device unisoc mtty failed\n");
+		return 0;
+	}
+	if (platform_device_add(mtty_pdev) != 0) {
+		pr_err("register platform device unisoc mtty failed\n");
+		platform_device_put(mtty_pdev);
+		mtty_pdev = NULL;
 	}
 
-	return ret;
+	return 0;
 }
 
 static void __exit mtty_pdev_exit(void)
 {
+	if (mtty_pdev)
+		platform_device_unregister(mtty_pdev);
 	platform_driver_unregister(&mtty_driver);
-	platform_device_del(mtty_pdev);
 }
 
 module_init(mtty_pdev_init);
