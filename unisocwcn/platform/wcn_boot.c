@@ -439,6 +439,7 @@ unsigned int marlin_get_wcn_chipid(void)
 	ret = sprdwcn_bus_reg_read(CHIPID_REG, &chip_id, 4);
 	if (ret < 0) {
 		WCN_ERR("marlin read chip ID fail, ret=%d\n", ret);
+		chip_id = 0;
 		return 0;
 	}
 
@@ -447,6 +448,8 @@ unsigned int marlin_get_wcn_chipid(void)
 	ret = sprdwcn_bus_reg_read(CHIPID_REG_M3E, &chip_id, 4);
 	if (ret < 0) {
 		WCN_ERR("read marlin3E chip id fail, ret=%d\n", ret);
+		/* don't cache a partial read; the next call reads again */
+		chip_id = 0;
 		return 0;
 	}
 
@@ -455,6 +458,7 @@ unsigned int marlin_get_wcn_chipid(void)
 		ret = sprdwcn_bus_reg_read(CHIPID_REG_M3_M3L, &chip_id, 4);
 		if (ret < 0) {
 			WCN_ERR("read marlin3 chip id fail, ret=%d\n", ret);
+			chip_id = 0;
 			return 0;
 		}
 	}
@@ -3343,6 +3347,32 @@ static void set_wifipa_status(int subsys, int val)
 	}
 }
 
+#if defined(CONFIG_WCN_SDIO) && defined(CONFIG_RK_BOARD)
+#define CHIP_START_RETRIES 3
+/*
+ * Some boots the SDIO link comes up but the chip does not answer register
+ * reads (chip ID read times out with -110), and firmware loading then fails.
+ * A power cycle of the chip fixes it, so try that a few times here.
+ */
+static void chip_check_alive(void)
+{
+	int i;
+
+	for (i = 1; i <= CHIP_START_RETRIES; i++) {
+		if (marlin_get_wcn_chipid())
+			return;
+		WCN_ERR("chip does not answer, resetting it (try %d of %d)\n",
+			i, CHIP_START_RETRIES);
+		if (sprdwcn_bus_hw_reset() < 0)
+			break;
+	}
+	if (marlin_get_wcn_chipid())
+		WCN_INFO("chip answers after reset\n");
+	else
+		WCN_ERR("chip still does not answer, giving up\n");
+}
+#endif
+
 /*
  * RST_N (LOW)
  * VDDIO -> DVDD12/11 ->CHIP_EN ->DVDD_CORE(inner)
@@ -3376,6 +3406,9 @@ int chip_power_on(int subsys)
 		WCN_ERR("wait SDIO rescan card time out\n");
 		return -1;
 	}
+#if defined(CONFIG_WCN_SDIO) && defined(CONFIG_RK_BOARD)
+	chip_check_alive();
+#endif
 	loopcheck_first_boot_set();
 #ifdef CONFIG_MEM_PD
 	mem_pd_poweroff_deinit();

@@ -525,6 +525,7 @@ int sdiohal_runtime_put(void);
 void sdiohal_register_scan_notify(void *func);
 int sdiohal_scan_card(void);
 void sdiohal_remove_card(void);
+int sdiohal_hw_reset_card(void);
 
 #ifdef SDIO_RESET_DEBUG
 /* Some custome platform not export sdio_reset_comm symbol. */
