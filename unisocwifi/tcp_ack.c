@@ -9,6 +9,65 @@
 #include "intf_ops.h"
 #include "tcp_ack.h"
 
+extern struct sprdwl_priv *g_sprdwl_priv;
+
+static void sprdwl_tcp_ack_set_enable(struct sprdwl_tcp_ack_manage *ack_m,
+				      bool enable);
+
+/*
+ * The ACK filter holds back outgoing TCP ACKs and sends only the newest one,
+ * at most every tcp_ack_drop_cnt ACKs or after 5 ms. Both parameters are
+ * applied when the interface starts and can be changed at runtime.
+ */
+static bool tcp_ack_drop_enable = true;
+unsigned int tcp_ack_drop_cnt = SPRDWL_TCP_ACK_DROP_CNT;
+
+static int tcp_ack_drop_enable_set(const char *val,
+				   const struct kernel_param *kp)
+{
+	int ret = param_set_bool(val, kp);
+
+	if (!ret && g_sprdwl_priv)
+		sprdwl_tcp_ack_set_enable(&g_sprdwl_priv->ack_m,
+					  tcp_ack_drop_enable);
+	return ret;
+}
+
+static const struct kernel_param_ops tcp_ack_drop_enable_ops = {
+	.set = tcp_ack_drop_enable_set,
+	.get = param_get_bool,
+};
+module_param_cb(tcp_ack_drop_enable, &tcp_ack_drop_enable_ops,
+		&tcp_ack_drop_enable, 0644);
+MODULE_PARM_DESC(tcp_ack_drop_enable,
+		 "Hold back and merge outgoing TCP ACKs (default 1)");
+
+static int tcp_ack_drop_cnt_set(const char *val,
+				const struct kernel_param *kp)
+{
+	unsigned int cnt;
+	int ret = kstrtouint(val, 0, &cnt);
+
+	if (ret)
+		return ret;
+	if (cnt < 1 || cnt > 99)
+		return -EINVAL;
+
+	tcp_ack_drop_cnt = cnt;
+	if (g_sprdwl_priv)
+		atomic_set(&g_sprdwl_priv->ack_m.max_drop_cnt, cnt);
+	return 0;
+}
+
+static const struct kernel_param_ops tcp_ack_drop_cnt_ops = {
+	.set = tcp_ack_drop_cnt_set,
+	.get = param_get_uint,
+};
+module_param_cb(tcp_ack_drop_cnt, &tcp_ack_drop_cnt_ops,
+		&tcp_ack_drop_cnt, 0644);
+MODULE_PARM_DESC(tcp_ack_drop_cnt,
+		 "Send one held-back ACK per this many (1-99, default 24)");
+
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
 static void sprdwl_tcp_ack_timeout(struct timer_list *t)
@@ -34,7 +93,12 @@ static void sprdwl_tcp_ack_timeout(unsigned long data)
 
 	write_seqlock_bh(&ack_info->seqlock);
 	msg = ack_info->msgbuf;
-	if (ack_info->busy && msg && !ack_info->in_send_msg) {
+	/*
+	 * Send the held ACK even if the previous one is still queued.
+	 * Otherwise nothing sends it until the next ACK of this flow, and a
+	 * sender waiting for it stalls until its retransmission timeout.
+	 */
+	if (ack_info->busy && msg) {
 		ack_info->msgbuf = NULL;
 		ack_info->drop_cnt = 0;
 		ack_info->in_send_msg = msg;
@@ -54,7 +118,7 @@ void sprdwl_tcp_ack_init(struct sprdwl_priv *priv)
 	memset(ack_m, 0, sizeof(struct sprdwl_tcp_ack_manage));
 	ack_m->priv = priv;
 	spin_lock_init(&ack_m->lock);
-	atomic_set(&ack_m->max_drop_cnt, SPRDWL_TCP_ACK_DROP_CNT);
+	atomic_set(&ack_m->max_drop_cnt, tcp_ack_drop_cnt);
 	ack_m->last_time = jiffies;
 	ack_m->timeout = msecs_to_jiffies(SPRDWL_ACK_OLD_TIME);
 
@@ -72,7 +136,7 @@ void sprdwl_tcp_ack_init(struct sprdwl_priv *priv)
 #endif
 	}
 
-	atomic_set(&ack_m->enable, 1);
+	atomic_set(&ack_m->enable, tcp_ack_drop_enable);
 	ack_m->ack_winsize = MIN_WIN;
 }
 
@@ -309,12 +373,14 @@ static int sprdwl_tcp_ack_alloc_index(struct sprdwl_tcp_ack_manage *ack_m)
 		do {
 			start = read_seqbegin(&ack_info->seqlock);
 			ret = -1;
-			if (!ack_info->busy) {
-				ack_m->free_index = -1;
-				ack_m->max_num++;
+			if (!ack_info->busy)
 				ret = i;
-			}
 		} while (read_seqretry(&ack_info->seqlock, start));
+	}
+	/* Count once, outside the retry loop, which can run more than once */
+	if (ret >= 0) {
+		ack_m->free_index = -1;
+		ack_m->max_num++;
 	}
 	spin_unlock_bh(&ack_m->lock);
 
@@ -531,21 +597,13 @@ void sprdwl_move_tcpack_msg(struct sprdwl_priv *priv,
 	}
 }
 
-extern struct sprdwl_priv *g_sprdwl_priv;
-
-void enable_tcp_ack_delay(char *buf, unsigned char offset)
+static void sprdwl_tcp_ack_set_enable(struct sprdwl_tcp_ack_manage *ack_m,
+				      bool enable)
 {
-	int enable = buf[offset] - '0';
 	int i;
-	struct sprdwl_tcp_ack_manage *ack_m = NULL;
 	struct sprdwl_msg_buf *drop_msg = NULL;
 
-	if (!g_sprdwl_priv)
-		return ;
-
-	ack_m = &g_sprdwl_priv->ack_m;
-
-	if (enable == 0) {
+	if (!enable) {
 		atomic_set(&ack_m->enable, 0);
 		for (i = 0; i < SPRDWL_TCP_ACK_NUM; i++) {
 			drop_msg = NULL;
@@ -561,12 +619,22 @@ void enable_tcp_ack_delay(char *buf, unsigned char offset)
 			write_sequnlock_bh(&ack_m->ack_info[i].seqlock);
 
 			if (drop_msg)
-				sprdwl_intf_tcp_drop_msg(g_sprdwl_priv,
+				sprdwl_intf_tcp_drop_msg(ack_m->priv,
 							 drop_msg);
 		}
 	} else {
 		atomic_set(&ack_m->enable, 1);
 	}
+}
+
+/* debugfs "tcpack_delay_en=" */
+void enable_tcp_ack_delay(char *buf, unsigned char offset)
+{
+	if (!g_sprdwl_priv)
+		return;
+
+	tcp_ack_drop_enable = (buf[offset] != '0');
+	sprdwl_tcp_ack_set_enable(&g_sprdwl_priv->ack_m, tcp_ack_drop_enable);
 }
 
 void adjust_tcp_ack_delay(char *buf, unsigned char offset)
@@ -596,6 +664,7 @@ void adjust_tcp_ack_delay(char *buf, unsigned char offset)
 	if (cnt >= 100)
 		cnt = SPRDWL_TCP_ACK_DROP_CNT;
 
+	tcp_ack_drop_cnt = cnt;
 	atomic_set(&ack_m->max_drop_cnt, cnt);
 	wl_err("drop time: %d, atomic drop time: %d\n", cnt, atomic_read(&ack_m->max_drop_cnt));
 #undef MAX_LEN

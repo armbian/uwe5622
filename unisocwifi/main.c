@@ -1662,16 +1662,5 @@ unsigned int disable_powersave;
 module_param(disable_powersave, uint, 0000);
 MODULE_PARM_DESC(disable_powersave, "Disable firmware power save mode (0=default, 1=ignore EVENT_PWR_DOWN)");
 
-unsigned int tcp_ack_drop_cnt = SPRDWL_TCP_ACK_DROP_CNT;
-/* Maybe you need S_IRUGO | S_IWUSR for debug */
-module_param(tcp_ack_drop_cnt, uint, 0000);
-MODULE_PARM_DESC(tcp_ack_drop_cnt, "valid values: [1, 13]");
-
-#ifdef TCP_ACK_DROP_SUPPORT
-unsigned int tcp_ack_drop_enable = 1;
-module_param(tcp_ack_drop_enable, uint, 0000);
-MODULE_PARM_DESC(tcp_ack_drop_enable, "valid values: [0, 1]");
-#else
-const unsigned int tcp_ack_drop_enable;
-#endif
+/* tcp_ack_drop_cnt and tcp_ack_drop_enable are defined in tcp_ack.c */
 
