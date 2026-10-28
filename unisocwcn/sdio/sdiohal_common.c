@@ -1409,13 +1409,12 @@ static int sdiohal_dtbs_buf_init(void)
 {
 	struct sdiohal_data_t *p_data = sdiohal_get_data();
 
-	p_data->dtbs_buf = sdiohal_alloc_frag(MAX_MBUF_SIZE,
-#if KERNEL_VERSION(4, 14, 0) <= LINUX_VERSION_CODE
-					      GFP_ATOMIC,
-#else
-					      GFP_ATOMIC | __GFP_COLD,
-#endif
-					      0, NULL);
+	/*
+	 * Not taken from the shared rx fragment page: a fragment cannot be
+	 * freed on its own, and freeing it as a page block releases pages
+	 * that belong to other users.
+	 */
+	p_data->dtbs_buf = kzalloc(MAX_MBUF_SIZE, GFP_KERNEL);
 	if (!p_data->dtbs_buf)
 		return -ENOMEM;
 
@@ -1427,17 +1426,11 @@ static int sdiohal_dtbs_buf_init(void)
 static int sdiohal_dtbs_buf_deinit(void)
 {
 	struct sdiohal_data_t *p_data = sdiohal_get_data();
-	int order;
 
 	if (!p_data->dtbs_buf)
 		return -ENOMEM;
 
-#if (BITS_PER_LONG > 32) || (PAGE_SIZE >= 65536)
-	order = SDIOHAL_FRAG_PAGE_MAX_ORDER;
-#else
-	order = SDIOHAL_FRAG_PAGE_MAX_ORDER_32_BIT;
-#endif
-	free_pages((unsigned long)p_data->dtbs_buf, order);
+	kfree(p_data->dtbs_buf);
 	p_data->dtbs_buf = NULL;
 
 	return 0;
