@@ -1301,21 +1301,21 @@ static void sprdwl_deinit_vif(struct sprdwl_vif *vif)
 {
 	sprdwl_scan_done(vif, true);
 	sprdwl_sched_scan_done(vif, true);
+	/*
+	 * Report the connection as gone before the interface is removed.
+	 * The firmware's disconnect event will not arrive any more, and
+	 * cfg80211 warns about a station interface that still has a BSS
+	 * (_cfg80211_unregister_wdev).
+	 */
+	if (vif->ndev &&
+	    (vif->sm_state == SPRDWL_CONNECTING ||
+	     vif->sm_state == SPRDWL_CONNECTED ||
+	     vif->sm_state == SPRDWL_DISCONNECTING))
+		sprdwl_report_disconnection(vif, WLAN_REASON_DEAUTH_LEAVING);
+
 	/* We have to clear all the work which
 	 * is belong to the vif we are going to remove.
 	 */
-#ifdef SYNC_DISCONNECT
-	if (vif->sm_state == SPRDWL_CONNECTING ||
-	    vif->sm_state == SPRDWL_CONNECTED  ||
-	    vif->sm_state == SPRDWL_DISCONNECTING)
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 2, 0)
-		cfg80211_disconnected(vif->ndev, 3,
-		NULL, 0, false, GFP_KERNEL);
-#else
-		cfg80211_disconnected(vif->ndev, 3,
-		NULL, 0, GFP_KERNEL);
-#endif
-#endif
 	sprdwl_cancle_work(vif->priv, vif);
 
 	if (vif->ref > 0) {
