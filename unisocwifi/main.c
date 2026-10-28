@@ -1655,12 +1655,12 @@ int sprdwl_core_deinit(struct sprdwl_priv *priv)
 }
 
 unsigned int wfa_cap;
-module_param(wfa_cap, uint, 0000);
+module_param(wfa_cap, uint, 0444);
 MODULE_PARM_DESC(wfa_cap, "set capability for WFA test");
 
 unsigned int disable_powersave;
-module_param(disable_powersave, uint, 0000);
-MODULE_PARM_DESC(disable_powersave, "Disable firmware power save mode (0=default, 1=ignore EVENT_PWR_DOWN)");
+module_param(disable_powersave, uint, 0644);
+MODULE_PARM_DESC(disable_powersave, "Disable firmware power save mode (0=default, 1=ignore EVENT_PWR_DOWN); takes effect at the next power-down request");
 
 /* tcp_ack_drop_cnt and tcp_ack_drop_enable are defined in tcp_ack.c */
 
