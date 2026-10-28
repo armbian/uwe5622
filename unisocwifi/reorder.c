@@ -841,6 +841,12 @@ void wlan_ba_session_event(void *hw_intf,
 		wlan_delba_event(ba_entry, ba_event);
 		break;
 	case SPRDWL_BAR_EVENT:
+		/*
+		 * Ignored: the handler was disabled in the vendor code, for
+		 * reasons unknown. Frames the sender has given up on are
+		 * then only skipped when the reorder timer fires
+		 * (RX_BA_LOSS_RECOVERY_TIMEOUT, 100 ms).
+		 */
 		/*wlan_bar_event(ba_entry, ba_event);*/
 		break;
 	case SPRDWL_FILTER_EVENT:
