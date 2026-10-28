@@ -794,92 +794,59 @@ static int sprdwl_cfg80211_add_key(struct wiphy *wiphy, struct net_device *ndev,
 }
 #endif
 
+static int sprdwl_del_cipher_key(struct sprdwl_vif *vif, u8 key_index,
+				 bool pairwise, const u8 *mac_addr)
+{
+	wl_ndev_log(L_DBG, vif->ndev, "%s key_index=%d, pairwise=%d\n",
+		    __func__, key_index, pairwise);
+
+	if (key_index >= SPRDWL_NUM_KEY_SLOTS) {
+		wl_ndev_log(L_ERR, vif->ndev, "%s key index %d out of bounds!\n",
+			    __func__, key_index);
+		return -ENOENT;
+	}
+
+	/* Deleting keys that were never set is normal on disconnect */
+	if (!vif->key_len[pairwise][key_index]) {
+		wl_ndev_log(L_DBG, vif->ndev, "%s key index %d is empty\n",
+			    __func__, key_index);
+		return 0;
+	}
+
+	vif->key_len[pairwise][key_index] = 0;
+	/* Slots 4-5 hold the IGTK; deleting it leaves the data ciphers alone */
+	if (key_index <= SPRDWL_MAX_KEY_INDEX) {
+		vif->prwise_crypto = SPRDWL_CIPHER_NONE;
+		vif->grp_crypto = SPRDWL_CIPHER_NONE;
+	}
+
+	return sprdwl_del_key(vif->priv, vif->ctx_id, key_index,
+			      pairwise, mac_addr);
+}
+
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(7, 1, 0)
 static int sprdwl_cfg80211_del_key(struct wiphy *wiphy, struct wireless_dev *wdev,
 				   int link_id, u8 key_index, bool pairwise,
 				   const u8 *mac_addr)
 {
-	struct sprdwl_vif *vif = netdev_priv(wdev->netdev);
-
-	wl_ndev_log(L_DBG, vif->ndev, "%s key_index=%d, pairwise=%d\n",
-		    __func__, key_index, pairwise);
-
-	if (key_index > SPRDWL_MAX_KEY_INDEX) {
-		wl_ndev_log(L_ERR, vif->ndev, "%s key index %d out of bounds!\n", __func__,
-			   key_index);
-		return -ENOENT;
-	}
-
-	if (!vif->key_len[pairwise][key_index]) {
-		wl_ndev_log(L_ERR, vif->ndev, "%s key index %d is empty!\n", __func__,
-			   key_index);
-		return 0;
-	}
-
-	vif->key_len[pairwise][key_index] = 0;
-	vif->prwise_crypto = SPRDWL_CIPHER_NONE;
-	vif->grp_crypto = SPRDWL_CIPHER_NONE;
-
-	return sprdwl_del_key(vif->priv, vif->ctx_id, key_index,
-			      pairwise, mac_addr);
+	return sprdwl_del_cipher_key(netdev_priv(wdev->netdev), key_index, pairwise,
+				     mac_addr);
 }
 #elif LINUX_VERSION_CODE >= KERNEL_VERSION(6, 1, 0)
 static int sprdwl_cfg80211_del_key(struct wiphy *wiphy, struct net_device *ndev,
 				   int link_id, u8 key_index, bool pairwise,
 				   const u8 *mac_addr)
 {
-	struct sprdwl_vif *vif = netdev_priv(ndev);
-
-	wl_ndev_log(L_DBG, ndev, "%s key_index=%d, pairwise=%d\n",
-		    __func__, key_index, pairwise);
-
-	if (key_index > SPRDWL_MAX_KEY_INDEX) {
-		wl_ndev_log(L_ERR, ndev, "%s key index %d out of bounds!\n", __func__,
-			   key_index);
-		return -ENOENT;
-	}
-
-	if (!vif->key_len[pairwise][key_index]) {
-		wl_ndev_log(L_ERR, ndev, "%s key index %d is empty!\n", __func__,
-			   key_index);
-		return 0;
-	}
-
-	vif->key_len[pairwise][key_index] = 0;
-	vif->prwise_crypto = SPRDWL_CIPHER_NONE;
-	vif->grp_crypto = SPRDWL_CIPHER_NONE;
-
-	return sprdwl_del_key(vif->priv, vif->ctx_id, key_index,
-			      pairwise, mac_addr);
+	return sprdwl_del_cipher_key(netdev_priv(ndev), key_index, pairwise,
+				     mac_addr);
 }
 #else
 static int sprdwl_cfg80211_del_key(struct wiphy *wiphy, struct net_device *ndev,
 				   u8 key_index, bool pairwise,
 				   const u8 *mac_addr)
 {
-	struct sprdwl_vif *vif = netdev_priv(ndev);
-
-	wl_ndev_log(L_DBG, ndev, "%s key_index=%d, pairwise=%d\n",
-		    __func__, key_index, pairwise);
-
-	if (key_index > SPRDWL_MAX_KEY_INDEX) {
-		wl_ndev_log(L_ERR, ndev, "%s key index %d out of bounds!\n", __func__,
-			   key_index);
-		return -ENOENT;
-	}
-
-	if (!vif->key_len[pairwise][key_index]) {
-		wl_ndev_log(L_ERR, ndev, "%s key index %d is empty!\n", __func__,
-			   key_index);
-		return 0;
-	}
-
-	vif->key_len[pairwise][key_index] = 0;
-	vif->prwise_crypto = SPRDWL_CIPHER_NONE;
-	vif->grp_crypto = SPRDWL_CIPHER_NONE;
-
-	return sprdwl_del_key(vif->priv, vif->ctx_id, key_index,
-			      pairwise, mac_addr);
+	return sprdwl_del_cipher_key(netdev_priv(ndev), key_index, pairwise,
+				     mac_addr);
 }
 #endif
 
