@@ -2165,6 +2165,52 @@ void sdiohal_remove_card(void)
 	sdiohal_unlock_scan_ws();
 }
 
+/*
+ * Power-cycle the chip through the MMC core and enable function 1 again.
+ * On boards with an mmc-pwrseq this pulses the chip's reset line, the same
+ * as unbinding and rebinding the SDIO host. Only used during start-up,
+ * before the SDIO interrupt is claimed and before firmware is loaded.
+ */
+int sdiohal_hw_reset_card(void)
+{
+	struct sdiohal_data_t *p_data = sdiohal_get_data();
+	struct sdio_func *func;
+	int ret;
+
+	if (!p_data || !WCN_CARD_EXIST(&p_data->xmit_cnt) ||
+	    !p_data->sdio_func[FUNC_1])
+		return -ENODEV;
+	func = p_data->sdio_func[FUNC_1];
+
+	sdiohal_info("%s: power-cycling the chip\n", __func__);
+	sdio_claim_host(func);
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 19, 0)
+	ret = mmc_hw_reset(func->card);
+#else
+	ret = mmc_hw_reset(func->card->host);
+#endif
+	/* > 0: the core chose to remove and re-detect the card instead */
+	if (ret > 0)
+		ret = -EBUSY;
+	if (!ret) {
+		ret = sdio_enable_func(func);
+		if (!ret)
+			ret = sdio_set_block_size(func, SDIOHAL_BLK_SIZE);
+		func->max_blksize = SDIOHAL_BLK_SIZE;
+	}
+	sdio_release_host(func);
+
+	if (ret) {
+		sdiohal_err("%s failed: %d\n", __func__, ret);
+		return ret;
+	}
+
+	sdiohal_set_cp_pin_status();
+	sdiohal_enable_slave_irq();
+
+	return 0;
+}
+
 int sdiohal_scan_card(void)
 {
 	struct sdiohal_data_t *p_data = sdiohal_get_data();

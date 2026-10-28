@@ -1,6 +1,8 @@
 #ifndef __WCN_BUS_H__
 #define __WCN_BUS_H__
 
+#include <linux/errno.h>
+
 #define CHN_MAX_NUM 32
 
 #ifdef CONFIG_WCN_SDIO
@@ -171,6 +173,8 @@ struct sprdwcn_bus_ops {
 	int (*rescan)(void);
 	void (*register_rescan_cb)(void *);
 	void (*remove_card)(void);
+	/* power-cycle the chip and bring the bus back up */
+	int (*hw_reset)(void);
 	/* for module to know hif_type */
 	int (*get_hif_type)(void);
 	int (*driver_register)(void);
@@ -492,6 +496,17 @@ void sprdwcn_bus_remove_card(void)
 		return;
 
 	bus_ops->remove_card();
+}
+
+static inline
+int sprdwcn_bus_hw_reset(void)
+{
+	struct sprdwcn_bus_ops *bus_ops = get_wcn_bus_ops();
+
+	if (!bus_ops || !bus_ops->hw_reset)
+		return -EOPNOTSUPP;
+
+	return bus_ops->hw_reset();
 }
 
 static inline

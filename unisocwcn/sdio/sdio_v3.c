@@ -172,6 +172,7 @@ static struct sprdwcn_bus_ops sdiohal_bus_ops = {
 	.register_rescan_cb = sdio_register_rescan_cb,
 	.rescan = sdio_rescan,
 	.remove_card = sdio_remove_card,
+	.hw_reset = sdiohal_hw_reset_card,
 	.get_tx_mode = sdiohal_get_tx_mode,
 	.get_rx_mode = sdiohal_get_rx_mode,
 	.get_irq_type = sdiohal_get_irq_type,
