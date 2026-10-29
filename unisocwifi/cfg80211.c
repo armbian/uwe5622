@@ -700,6 +700,14 @@ static int sprdwl_add_cipher_key(struct sprdwl_vif *vif, bool pairwise,
 	wl_ndev_log(L_DBG, vif->ndev, "%s %s key_index %d\n", __func__,
 		    pairwise ? "pairwise" : "group", key_index);
 
+	/* IGTK (4-5) protects management frames: not a data cipher */
+	if (key_index > SPRDWL_MAX_KEY_INDEX)
+		return sprdwl_add_key(vif->priv, vif->ctx_id,
+				      vif->key[pairwise][key_index],
+				      vif->key_len[pairwise][key_index],
+				      pairwise, key_index, key_seq,
+				      sprdwl_parse_cipher(cipher), mac_addr);
+
 	if (vif->key_len[pairwise][0] || vif->key_len[pairwise][1] ||
 	    vif->key_len[pairwise][2] || vif->key_len[pairwise][3]) {
 		*cipher_ptr = vif->prwise_crypto = sprdwl_parse_cipher(cipher);
