@@ -83,6 +83,13 @@ int rfkill_bluetooth_remove(struct platform_device *dev)
 	pr_info("-->%s\n", __func__);
 	if (bt_rfk) {
 		rfkill_unregister(bt_rfk);
+		/*
+		 * Unregistering does not call set_block, so power Bluetooth
+		 * down here. Otherwise its power bit stays set and the chip
+		 * is never powered off once WiFi is down too.
+		 */
+		if (!rfkill_blocked(bt_rfk))
+			stop_marlin(MARLIN_BLUETOOTH);
 		rfkill_destroy(bt_rfk);
 		bt_rfk = NULL;
 	}
