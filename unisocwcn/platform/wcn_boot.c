@@ -1432,12 +1432,14 @@ OUT:
 #ifdef CONFIG_AW_BOARD
 static void marlin_bt_wake_int_en(void)
 {
-	enable_irq(marlin_dev->bt_wake_host_int_num);
+	if (marlin_dev->bt_wake_host_int_num)
+		enable_irq(marlin_dev->bt_wake_host_int_num);
 }
 
 static void marlin_bt_wake_int_dis(void)
 {
-	disable_irq(marlin_dev->bt_wake_host_int_num);
+	if (marlin_dev->bt_wake_host_int_num)
+		disable_irq(marlin_dev->bt_wake_host_int_num);
 }
 
 static irqreturn_t marlin_bt_wake_int_isr(int irq, void *para)
@@ -1458,8 +1460,14 @@ static int __maybe_unused marlin_registsr_bt_wake(struct device *dev)
 
 	np = of_find_compatible_node(NULL, NULL, "allwinner,sunxi-btlpm");
 	if (!np) {
-		WCN_ERR("dts node for bt_wake not found");
-		return -EINVAL;
+		/*
+		 * Optional: mainline device trees (Orange Pi Zero2/Zero3,
+		 * WalnutPi, ...) do not describe the BT_WAKE_AP pin. The chip
+		 * works without it, only Bluetooth cannot wake the host from
+		 * suspend. Not an error.
+		 */
+		WCN_INFO("no allwinner,sunxi-btlpm node, bt_hostwake irq not used\n");
+		return -ENODEV;
 	}
 	bt_wake_host_gpio = fwnode_gpiod_get_index(of_fwnode_handle(np),
 				"bt_hostwake", 0, GPIOD_IN, "bt-wake-host-gpio");
@@ -1506,8 +1514,14 @@ static int __maybe_unused marlin_registsr_bt_wake(struct device *dev)
 
 	np = of_find_compatible_node(NULL, NULL, "allwinner,sunxi-btlpm");
 	if (!np) {
-		WCN_ERR("dts node for bt_wake not found");
-		return -EINVAL;
+		/*
+		 * Optional: mainline device trees (Orange Pi Zero2/Zero3,
+		 * WalnutPi, ...) do not describe the BT_WAKE_AP pin. The chip
+		 * works without it, only Bluetooth cannot wake the host from
+		 * suspend. Not an error.
+		 */
+		WCN_INFO("no allwinner,sunxi-btlpm node, bt_hostwake irq not used\n");
+		return -ENODEV;
 	}
 	bt_wake_host_gpio = of_get_named_gpio(np, "bt_hostwake", 0);
 	if (!gpio_is_valid(bt_wake_host_gpio)) {
