@@ -753,10 +753,11 @@ static int sdiohal_test_int_init(unsigned char func_tag)
 {
 #ifdef CONFIG_WCN_PARSE_DTS
 	struct device_node *np;
-#endif
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(7, 1, 0)
 	struct gpio_desc *pub_gpio_desc = NULL;
-#else
+#endif
+#endif
+#if LINUX_VERSION_CODE < KERNEL_VERSION(7, 1, 0)
 	unsigned int pub_gpio_num = 0;
 #endif
 	unsigned char reg_int_en = 0;
