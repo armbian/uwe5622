@@ -681,7 +681,7 @@ out:
 		break;
 	}
 
-	wl_err("ctx_id = %d, sm_state = %d, bssid =%pM\n",
+	wl_debug("ctx_id = %d, sm_state = %d, bssid =%pM\n",
 			vif->ctx_id, vif->sm_state, intf->skb_da);
 
 	return ret;

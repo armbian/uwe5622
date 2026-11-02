@@ -485,6 +485,6 @@ int get_wifi_config_param(struct wifi_conf_t *p)
 	sprintf(conf_name, "wifi_%8x_%dant.ini", chipid, ant);
 	strcat(path_buf, conf_name);
 
-	pr_err("wifi ini path = %s\n", path_buf);
+	pr_info("wifi ini path = %s\n", path_buf);
 	return wifi_nvm_parse(path_buf, (void *)p);
 }
