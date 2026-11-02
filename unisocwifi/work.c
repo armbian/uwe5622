@@ -96,6 +96,10 @@ static void sprdwl_do_work(struct work_struct *work)
 			sprdwl_notify_ip(priv, vif->ctx_id, SPRDWL_IPV6,
 					 sprdwl_work->data);
 			break;
+		case SPRDWL_WORK_NOTIFY_IPV4:
+			sprdwl_notify_ip(priv, vif->ctx_id, SPRDWL_IPV4,
+					 sprdwl_work->data);
+			break;
 		case SPRDWL_WORK_BA_MGMT:
 			ba_data = (struct sprdwl_ba_event_data *)sprdwl_work->data;
 			sprdwl_send_ba_mgmt(priv, vif->ctx_id,

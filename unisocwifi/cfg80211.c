@@ -24,6 +24,7 @@
  */
 
 #include <linux/string.h>
+#include <linux/inetdevice.h>
 #include "sprdwl.h"
 #include "cfg80211.h"
 #include "cmdevt.h"
@@ -2713,6 +2714,44 @@ void sprdwl_report_scan_result(struct sprdwl_vif *vif, u16 chan, s16 rssi,
 	}
 }
 
+/*
+ * The firmware filters broadcast ARP itself (ARP offload) and only passes
+ * requests for the address given in WIFI_CMD_NOTIFY_IP_ACQUIRED, which it
+ * forgets on every (re)association. The inetaddr notifier sends it only
+ * when an address is added in station mode, so an address configured
+ * before the association (static address, or one DHCP keeps across a
+ * reconnect, AP restart, roam or resume) never reached the firmware and
+ * peers could not resolve the board until it sent traffic itself. Send
+ * the current IPv4 address again after each successful (re)association.
+ */
+static void sprdwl_renotify_ipv4(struct sprdwl_vif *vif)
+{
+	const struct in_ifaddr *ifa;
+	struct in_device *in_dev;
+	struct sprdwl_work *work;
+	__be32 addr = 0;
+
+	rcu_read_lock();
+	in_dev = __in_dev_get_rcu(vif->ndev);
+	if (in_dev) {
+		ifa = rcu_dereference(in_dev->ifa_list);
+		if (ifa)
+			addr = ifa->ifa_address;
+	}
+	rcu_read_unlock();
+
+	if (!addr)
+		return;
+
+	work = sprdwl_alloc_work(sizeof(addr));
+	if (!work)
+		return;
+	work->vif = vif;
+	work->id = SPRDWL_WORK_NOTIFY_IPV4;
+	memcpy(work->data, &addr, sizeof(addr));
+	sprdwl_queue_work(vif->priv, work);
+}
+
 void sprdwl_report_connection(struct sprdwl_vif *vif,
 					struct sprdwl_connect_info *conn_info,
 					u8 status_code)
@@ -2973,6 +3012,9 @@ lookup_bss:
 	wl_ndev_log(L_DBG, vif->ndev, "%s %s to %s (%pM)\n", __func__,
 		    state == SPRDWL_CONNECTING ?
 			"connect" : "roam", vif->ssid, vif->bssid);
+	if (vif->wdev.iftype == NL80211_IFTYPE_STATION ||
+	    vif->wdev.iftype == NL80211_IFTYPE_P2P_CLIENT)
+		sprdwl_renotify_ipv4(vif);
 	return;
 err:
 	if (bss)
