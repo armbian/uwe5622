@@ -59,6 +59,7 @@ struct HC_BT_HDR {
 
 struct hci_cmd_t {
 	unsigned short opcode;
+	unsigned char status;
 	struct semaphore wait;
 	struct HC_BT_HDR response;
 };

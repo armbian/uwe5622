@@ -28,18 +28,43 @@
 #endif
 #include <marlin_platform.h>
 #include "rfkill.h"
+#include "bt_init.h"
 
 
 static struct rfkill *bt_rfk;
+static struct device *bt_dev;
 static const char bt_name[] = "bluetooth";
 
 static int bluetooth_set_power(void *data, bool blocked)
 {
+	int ret;
+
 	pr_info("%s: start_block=%d\n", __func__, blocked);
-	if (!blocked)
-		start_marlin(MARLIN_BLUETOOTH);
-	else
-		stop_marlin(MARLIN_BLUETOOTH);
+	if (!blocked) {
+		ret = start_marlin(MARLIN_BLUETOOTH);
+		if (ret) {
+			pr_err("%s: start_marlin failed: %d\n", __func__, ret);
+			return ret;
+		}
+		/*
+		 * The core is powered but unconfigured; send PSKEY/RF/enable
+		 * so that a plain HCI line discipline can drive it. On failure
+		 * power it down again and report the error, so the rfkill
+		 * switch stays blocked and userspace can retry.
+		 */
+		ret = sprd_bt_init(bt_dev);
+		if (ret) {
+			pr_err("%s: Bluetooth vendor init failed: %d\n",
+				__func__, ret);
+			stop_marlin(MARLIN_BLUETOOTH);
+			return ret;
+		}
+	} else {
+		sprd_bt_init_invalidate();
+		ret = stop_marlin(MARLIN_BLUETOOTH);
+		if (ret)
+			pr_err("%s: stop_marlin failed: %d\n", __func__, ret);
+	}
 
 	pr_info("%s: end_block=%d\n", __func__, blocked);
 	return 0;
@@ -55,6 +80,7 @@ int rfkill_bluetooth_init(struct platform_device *pdev)
 	int rc = 0;
 
 	pr_info("-->%s\n", __func__);
+	bt_dev = &pdev->dev;
 	bt_rfk = rfkill_alloc(bt_name, &pdev->dev, RFKILL_TYPE_BLUETOOTH,
 			&rfkill_bluetooth_ops, NULL);
 	if (!bt_rfk) {

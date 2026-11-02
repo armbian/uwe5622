@@ -15,6 +15,7 @@ sprdbt_tty-objs := \
 	woble.o\
 	alignment/sitm.o \
 	dump.o
+sprdbt_tty-$(CONFIG_TTY_OVERY_SDIO_BT_VENDOR_INIT) += bt_init.o
 
 obj-$(CONFIG_TTY_OVERY_SDIO) += sprdbt_tty.o
 

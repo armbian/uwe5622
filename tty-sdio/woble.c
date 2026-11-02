@@ -23,6 +23,7 @@
 #include <wcn_fs.h>
 #include "woble.h"
 #include "tty.h"
+#include "alignment/sitm.h"
 
 #define CMD_TIMEOUT 5000
 #define MAX_WAKE_DEVICE_MAX_NUM 36
@@ -216,17 +217,28 @@ int woble_data_recv(const unsigned char *buf, int count)
 
 	if (hci_cmd.opcode == opcode && hci_cmd.opcode) {
 		pr_info("%s opcode: 0x%04X, status: %d\n", __func__, opcode, status);
+		hci_cmd.status = status;
 		up(&hci_cmd.wait);
 		ret = 0;
 	}
 	return ret;
 }
 
+/*
+ * Send one HCI command and wait for its Command Complete/Status.
+ * Returns 0 on success, -EIO on a transport error or a non-zero HCI
+ * status, -ETIME when the controller does not answer within CMD_TIMEOUT.
+ * Like the tty write path (sitm), the frame is zero-padded to the SDIO
+ * 4-byte alignment.
+ */
 int hci_cmd_send_sync(unsigned short opcode, struct HC_BT_HDR *py,
 		struct HC_BT_HDR *rsp)
 {
-	unsigned char msg_req[HCI_CMD_MAX_LEN], *p;
-	int ret = 0;
+	unsigned char msg_req[HCI_CMD_MAX_LEN + BYTE_ALIGNMENT] = {0}, *p;
+	int len, ret = 0;
+
+	if (py && py->len > HCI_CMD_MAX_LEN - 4)
+		return -EINVAL;
 
 	p = msg_req;
 	UINT8_TO_STREAM(p, HCI_CMD);
@@ -238,19 +250,30 @@ int hci_cmd_send_sync(unsigned short opcode, struct HC_BT_HDR *py,
 		UINT8_TO_STREAM(p, py->len);
 		ARRAY_TO_STREAM(p, py->data, py->len);
 	}
+	len = p - msg_req;
+	len += BYTE_ALIGNMENT - (len % BYTE_ALIGNMENT);
 
 	hci_cmd.opcode = opcode;
-	ret = marlin_sdio_write(msg_req, p - msg_req);
-	if (!ret) {
+	hci_cmd.status = 0xff;
+	ret = marlin_sdio_write(msg_req, len);
+	if (ret <= 0) {
 		hci_cmd.opcode = 0;
-		pr_err("%s marlin_sdio_write fail", __func__);
-		return 0;
+		pr_err("%s marlin_sdio_write fail (%d)\n", __func__, ret);
+		return -EIO;
 	}
 
 	if (down_timeout(&hci_cmd.wait, msecs_to_jiffies(CMD_TIMEOUT))) {
-		pr_err("%s CMD_TIMEOUT for CMD: 0x%04X", __func__, opcode);
+		pr_err("%s CMD_TIMEOUT for CMD: 0x%04X\n", __func__, opcode);
+		hci_cmd.opcode = 0;
+		return -ETIME;
 	}
 	hci_cmd.opcode = 0;
+
+	if (hci_cmd.status) {
+		pr_err("%s CMD 0x%04X failed, status 0x%02X\n",
+			__func__, opcode, hci_cmd.status);
+		return -EIO;
+	}
 
 	return 0;
 }

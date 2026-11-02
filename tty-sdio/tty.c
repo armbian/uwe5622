@@ -43,6 +43,7 @@
 #include "rfkill.h"
 #include "dump.h"
 #include "woble.h"
+#include "bt_init.h"
 #include "alignment/sitm.h"
 
 static unsigned int log_level = MTTY_LOG_LEVEL_NONE;
@@ -279,7 +280,13 @@ static int mtty_rx_cb(int chn, struct mbuf_t *head, struct mbuf_t *tail, int num
 	woble_data_recv((unsigned char *)head->buf + BT_SDIO_HEAD_LEN, block_size);
 
 	if (atomic_read(&mtty_dev->state) == MTTY_STATE_CLOSE) {
-		pr_err("%s mtty bt is closed abnormally\n", __func__);
+		/*
+		 * Expected while the in-kernel vendor init talks to the
+		 * controller before userspace opens the tty: the events
+		 * were consumed by woble_data_recv() above.
+		 */
+		pr_debug("%s mtty bt is closed, %d bytes dropped\n", __func__,
+			block_size);
 		sprdwcn_bus_push_list(chn, head, tail, num);
 		return -1;
 	}
@@ -647,6 +654,8 @@ static int bluetooth_reset(struct notifier_block *this, unsigned long ev, void *
 
 	if (!ev) {
 		pr_info("%s:reset callback coming\n", __func__);
+		/* the firmware restarted: PSKEY/RF must be sent again */
+		sprd_bt_init_invalidate();
 		if (mtty_dev != NULL) {
 			if (!work_pending(&mtty_dev->bt_rx_work)) {
 				pr_info("%s tty_insert_flip_string", __func__);
@@ -737,7 +746,6 @@ static int  mtty_probe(struct platform_device *pdev)
 	}
 //#endif
 
-	rfkill_bluetooth_init(pdev);
 	bluesleep_init();
 	woble_init();
 
@@ -746,6 +754,13 @@ static int  mtty_probe(struct platform_device *pdev)
 	sprdwcn_bus_chn_init(&bt_rx_ops);
 	sprdwcn_bus_chn_init(&bt_tx_ops);
 	sema_init(&sem_id, BT_TX_POOL_SIZE - 1);
+
+	/*
+	 * Last: unblocking the switch powers the core and runs the vendor
+	 * init over the channels and semaphore set up above, and userspace
+	 * (systemd-rfkill) may unblock as soon as the rfkill device appears.
+	 */
+	rfkill_bluetooth_init(pdev);
 
 	return 0;
 }
