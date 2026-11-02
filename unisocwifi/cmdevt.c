@@ -419,7 +419,7 @@ struct sprdwl_msg_buf *__sprdwl_cmd_getbuf(struct sprdwl_priv *priv,
 	if (cmd_id >= WIFI_CMD_OPEN) {
 		vif = ctx_id_to_vif(priv, ctx_id);
 		if (!vif)
-			wl_err("%s cant't get vif, ctx_id: %d\n",
+			wl_debug("%s cant't get vif, ctx_id: %d\n",
 			       __func__, ctx_id);
 		else
 			mode =  vif->mode;
