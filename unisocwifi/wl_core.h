@@ -78,6 +78,8 @@ struct sprdwl_peer_entry {
 	u8 vowifi_enabled;
 	u8 vowifi_pkt_cnt;
 	struct timespec time[6 + 1];
+	/* boottime seconds when the firmware added this peer (AP mode) */
+	time64_t assoc_time;
 };
 
 #if defined(MORE_DEBUG)

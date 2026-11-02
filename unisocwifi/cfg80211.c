@@ -1308,6 +1308,47 @@ sprdwl_cfg80211_change_station(struct wiphy *wiphy,
 #endif
 
 
+static bool sprdwl_vif_is_ap(struct sprdwl_vif *vif)
+{
+	return vif->mode == SPRDWL_MODE_AP || vif->mode == SPRDWL_MODE_P2P_GO;
+}
+
+/*
+ * WIFI_CMD_GET_STATION has no peer address and reports the link of a
+ * station interface only; in AP mode it returns signal 0 and no rate
+ * for whatever MAC is asked. Associated stations are known from the
+ * firmware's LUT events (sprdwl_event_sta_lut), so answer AP-mode
+ * queries from that table instead.
+ */
+static struct sprdwl_peer_entry *sprdwl_ap_peer(struct sprdwl_vif *vif,
+						const u8 *mac, int idx)
+{
+	struct sprdwl_intf *intf = (struct sprdwl_intf *)vif->priv->hw_priv;
+	struct sprdwl_peer_entry *peer;
+	int i;
+
+	for (i = 0; i < MAX_LUT_NUM; i++) {
+		peer = &intf->peer_entry[i];
+		if (peer->ctx_id != vif->ctx_id ||
+		    !is_valid_ether_addr(peer->tx.da) ||
+		    ether_addr_equal(peer->tx.da, vif->ndev->dev_addr))
+			continue;
+		if (mac ? ether_addr_equal(peer->tx.da, mac) : idx-- == 0)
+			return peer;
+	}
+	return NULL;
+}
+
+static void sprdwl_ap_fill_sinfo(struct sprdwl_peer_entry *peer,
+				 struct station_info *sinfo)
+{
+	if (peer->assoc_time) {
+		sinfo->connected_time = ktime_get_boottime_seconds() -
+					peer->assoc_time;
+		sinfo->filled |= BIT_ULL(NL80211_STA_INFO_CONNECTED_TIME);
+	}
+}
+
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(7, 1, 0)
 static int sprdwl_cfg80211_get_station(struct wiphy *wiphy,
 					   struct wireless_dev *wdev, const u8 *mac,
@@ -1317,6 +1358,15 @@ static int sprdwl_cfg80211_get_station(struct wiphy *wiphy,
 	struct sprdwl_cmd_get_station sta;
 	struct sprdwl_rate_info *rate;
 	int ret;
+
+	if (sprdwl_vif_is_ap(vif)) {
+		struct sprdwl_peer_entry *peer = sprdwl_ap_peer(vif, mac, 0);
+
+		if (!peer)
+			return -ENOENT;
+		sprdwl_ap_fill_sinfo(peer, sinfo);
+		return 0;
+	}
 
 	sinfo->filled |= BIT(NL80211_STA_INFO_TX_BYTES) |
 			 BIT(NL80211_STA_INFO_TX_PACKETS) |
@@ -1378,6 +1428,29 @@ static int sprdwl_cfg80211_get_station(struct wiphy *wiphy,
 			rate->mcs, rate->flags);
 out:
 	return ret;
+}
+
+static int sprdwl_cfg80211_dump_station(struct wiphy *wiphy,
+					struct wireless_dev *wdev, int idx,
+					u8 *mac, struct station_info *sinfo)
+{
+	struct sprdwl_vif *vif = netdev_priv(wdev->netdev);
+	struct sprdwl_peer_entry *peer;
+
+	if (!sprdwl_vif_is_ap(vif)) {
+		/* station mode: the one peer is the AP we are associated to */
+		if (idx != 0 || vif->sm_state != SPRDWL_CONNECTED)
+			return -ENOENT;
+		ether_addr_copy(mac, vif->bssid);
+		return sprdwl_cfg80211_get_station(wiphy, wdev, mac, sinfo);
+	}
+
+	peer = sprdwl_ap_peer(vif, NULL, idx);
+	if (!peer)
+		return -ENOENT;
+	ether_addr_copy(mac, peer->tx.da);
+	sprdwl_ap_fill_sinfo(peer, sinfo);
+	return 0;
 }
 
 #else
@@ -3592,7 +3665,7 @@ static int sprdwl_cfg80211_set_mac_acl(struct wiphy *wiphy,
 	unsigned char *mac_addr = NULL;
 
 	if (!acl || !acl->n_acl_entries) {
-		wl_ndev_log(L_ERR, ndev, "%s no ACL data\n", __func__);
+		wl_ndev_log(L_DBG, ndev, "%s no ACL data\n", __func__);
 		return 0;
 	}
 
@@ -3749,6 +3822,9 @@ static struct cfg80211_ops sprdwl_cfg80211_ops = {
 	.del_station = sprdwl_cfg80211_del_station,
 	.change_station = sprdwl_cfg80211_change_station,
 	.get_station = sprdwl_cfg80211_get_station,
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(7, 1, 0)
+	.dump_station = sprdwl_cfg80211_dump_station,
+#endif
 	.libertas_set_mesh_channel = sprdwl_cfg80211_set_channel,
 	.scan = sprdwl_cfg80211_scan,
 	.connect = sprdwl_cfg80211_connect,

@@ -1523,6 +1523,9 @@ void sprdwl_event_sta_lut(struct sprdwl_vif *vif, u8 *data, u16 len)
 			sta_lut->ra[0], sta_lut->ra[1], sta_lut->ra[2],
 			sta_lut->ra[3], sta_lut->ra[4], sta_lut->ra[5]);
 		ether_addr_copy(intf->peer_entry[i].tx.da, sta_lut->ra);
+		if (sta_lut->action == ADD_LUT_INDEX)
+			intf->peer_entry[i].assoc_time =
+				ktime_get_boottime_seconds();
 		break;
 	default:
 		break;
