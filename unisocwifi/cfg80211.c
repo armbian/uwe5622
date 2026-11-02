@@ -923,6 +923,42 @@ static int sprdwl_cfg80211_set_rekey(struct wiphy *wiphy,
 }
 
 /* SoftAP related stuff */
+
+/*
+ * The firmware takes the AP operating channel from the DS Parameter Set
+ * element of the beacon passed in WIFI_CMD_START_AP; there is no separate
+ * channel command on this path. hostapd and wpa_supplicant only emit that
+ * element on 2.4 GHz, so on 5 GHz the firmware never started beaconing.
+ * Insert it (after SSID/Supported Rates, where 802.11 orders it) when the
+ * head lacks it. @head must have room for 3 more bytes.
+ */
+static int sprdwl_beacon_add_ds_params(u8 *head, int head_len, u8 chan)
+{
+	struct ieee80211_mgmt *mgmt = (struct ieee80211_mgmt *)head;
+	u8 *end = head + head_len;
+	u8 *pos = mgmt->u.beacon.variable;
+	u8 *insert;
+
+	if (head_len < offsetof(struct ieee80211_mgmt, u.beacon.variable))
+		return head_len;
+
+	insert = pos;
+	while (pos + 2 <= end && pos + 2 + pos[1] <= end) {
+		if (pos[0] == WLAN_EID_DS_PARAMS)
+			return head_len;
+		if (pos[0] == WLAN_EID_SSID || pos[0] == WLAN_EID_SUPP_RATES)
+			insert = pos + 2 + pos[1];
+		pos += 2 + pos[1];
+	}
+
+	memmove(insert + 3, insert, end - insert);
+	insert[0] = WLAN_EID_DS_PARAMS;
+	insert[1] = 1;
+	insert[2] = chan;
+
+	return head_len + 3;
+}
+
 int sprdwl_change_beacon(struct sprdwl_vif *vif,
 		struct cfg80211_beacon_data *beacon)
 {
@@ -1035,6 +1071,11 @@ static int sprdwl_cfg80211_start_ap(struct wiphy *wiphy,
 		head_len = beacon->head_len;
 		tail_len = beacon->tail_len;
 	}
+
+	if (settings->chandef.chan)
+		head_len = sprdwl_beacon_add_ds_params(head, head_len,
+			is_valid_channel(wiphy, chn) ? chn :
+			settings->chandef.chan->hw_value);
 
 	sprdwl_change_beacon(vif, beacon);
 
