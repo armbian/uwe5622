@@ -724,11 +724,19 @@ static int sprdwl_add_cipher_key(struct sprdwl_vif *vif, bool pairwise,
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(7, 1, 0)
 static int sprdwl_cfg80211_add_key(struct wiphy *wiphy, struct wireless_dev *wdev,
-				   int link_id, u8 key_index, bool pairwise,
+				   int link_id, u8 key_index,
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(7, 4, 0)
+				   enum nl80211_key_type type,
+#else
+				   bool pairwise,
+#endif
 				   const u8 *mac_addr,
 				   struct key_params *params)
 {
 	struct sprdwl_vif *vif = netdev_priv(wdev->netdev);
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(7, 4, 0)
+	bool pairwise = (type == NL80211_KEYTYPE_PAIRWISE);
+#endif
 
 	if (key_index >= SPRDWL_NUM_KEY_SLOTS ||
 	    params->key_len > WLAN_MAX_KEY_LEN)
@@ -834,9 +842,18 @@ static int sprdwl_del_cipher_key(struct sprdwl_vif *vif, u8 key_index,
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(7, 1, 0)
 static int sprdwl_cfg80211_del_key(struct wiphy *wiphy, struct wireless_dev *wdev,
-				   int link_id, u8 key_index, bool pairwise,
+				   int link_id, u8 key_index,
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(7, 4, 0)
+				   enum nl80211_key_type type,
+#else
+				   bool pairwise,
+#endif
 				   const u8 *mac_addr)
 {
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(7, 4, 0)
+	bool pairwise = (type == NL80211_KEYTYPE_PAIRWISE);
+#endif
+
 	return sprdwl_del_cipher_key(netdev_priv(wdev->netdev), key_index, pairwise,
 				     mac_addr);
 }

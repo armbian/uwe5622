@@ -801,7 +801,7 @@ out:
 #define SPRDWLSETCOUNTRY	(SIOCDEVPRIVATE + 5)
 #define SPRDWLSETTLV		(SIOCDEVPRIVATE + 7)
 
-static int sprdwl_ioctl(struct net_device *ndev, struct ifreq *req, int cmd)
+static int __maybe_unused sprdwl_ioctl(struct net_device *ndev, struct ifreq *req, int cmd)
 {
 	struct sprdwl_vif *vif = netdev_priv(ndev);
 	struct iwreq *wrq = (struct iwreq *)req;
@@ -961,7 +961,9 @@ static struct net_device_ops sprdwl_netdev_ops = {
 	.ndo_start_xmit = sprdwl_start_xmit,
 	.ndo_get_stats = sprdwl_get_stats,
 	.ndo_tx_timeout = sprdwl_tx_timeout,
+#if LINUX_VERSION_CODE < KERNEL_VERSION(7, 4, 0)
 	.ndo_do_ioctl = sprdwl_ioctl,
+#endif
 	.ndo_set_mac_address = sprdwl_set_mac,
 };
 
