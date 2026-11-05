@@ -845,10 +845,10 @@ static bool sprdwl_is_ip_mc_addr(const u8 *addr)
 		addr[2] == 0x5e && addr[3] <= 0x7f);
 }
 
-static u8 sprdwl_ip_mc_count(struct net_device *ndev)
+static unsigned int sprdwl_ip_mc_count(struct net_device *ndev)
 {
 	struct netdev_hw_addr *ha;
-	u8 count = 0;
+	unsigned int count = 0;
 
 	netdev_for_each_mc_addr(ha, ndev)
 		if (sprdwl_is_ip_mc_addr(ha->addr))
@@ -861,7 +861,8 @@ static bool mc_address_changed(struct net_device *ndev)
 {
 	struct sprdwl_vif *vif = netdev_priv(ndev);
 	struct netdev_hw_addr *ha;
-	u8 mc_count, index;
+	unsigned int mc_count;
+	u8 index;
 	u8 *mac_addr;
 	bool found;
 
@@ -897,11 +898,11 @@ static void sprdwl_set_multicast(struct net_device *ndev)
 	struct sprdwl_priv *priv = vif->priv;
 	struct sprdwl_work *work;
 	struct netdev_hw_addr *ha;
-	u8 mc_count;
+	unsigned int mc_count;
 	u8 *mac_addr;
 
 	mc_count = sprdwl_ip_mc_count(ndev);
-	wl_ndev_log(L_DBG, ndev, "%s multicast address num: %d\n", __func__, mc_count);
+	wl_ndev_log(L_DBG, ndev, "%s multicast address num: %u\n", __func__, mc_count);
 	if (mc_count > priv->max_mc_mac_addrs)
 		return;
 
