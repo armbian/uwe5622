@@ -834,6 +834,29 @@ static int __maybe_unused sprdwl_ioctl(struct net_device *ndev, struct ifreq *re
 	return 0;
 }
 
+/* The firmware filter only takes IPv4 (01:00:5e:00-7f) and IPv6 (33:33)
+ * multicast addresses. Others, e.g. the 01:80:c2 addresses systemd-networkd
+ * joins for LLDP, must be skipped instead of aborting the whole update.
+ */
+static bool sprdwl_is_ip_mc_addr(const u8 *addr)
+{
+	return (addr[0] == 0x33 && addr[1] == 0x33) ||
+	       (addr[0] == 0x01 && addr[1] == 0x00 &&
+		addr[2] == 0x5e && addr[3] <= 0x7f);
+}
+
+static u8 sprdwl_ip_mc_count(struct net_device *ndev)
+{
+	struct netdev_hw_addr *ha;
+	u8 count = 0;
+
+	netdev_for_each_mc_addr(ha, ndev)
+		if (sprdwl_is_ip_mc_addr(ha->addr))
+			count++;
+
+	return count;
+}
+
 static bool mc_address_changed(struct net_device *ndev)
 {
 	struct sprdwl_vif *vif = netdev_priv(ndev);
@@ -842,14 +865,17 @@ static bool mc_address_changed(struct net_device *ndev)
 	u8 *mac_addr;
 	bool found;
 
-	mc_count = netdev_mc_count(ndev);
+	mc_count = sprdwl_ip_mc_count(ndev);
 
 	if (mc_count != vif->mc_filter->mac_num)
 		return true;
 
-	mac_addr = vif->mc_filter->mac_addr;
 	netdev_for_each_mc_addr(ha, ndev) {
+		if (!sprdwl_is_ip_mc_addr(ha->addr))
+			continue;
+
 		found = false;
+		mac_addr = vif->mc_filter->mac_addr;
 		for (index = 0; index < vif->mc_filter->mac_num; index++) {
 			if (!memcmp(ha->addr, mac_addr, ETH_ALEN)) {
 				found = true;
@@ -874,7 +900,7 @@ static void sprdwl_set_multicast(struct net_device *ndev)
 	u8 mc_count;
 	u8 *mac_addr;
 
-	mc_count = netdev_mc_count(ndev);
+	mc_count = sprdwl_ip_mc_count(ndev);
 	wl_ndev_log(L_DBG, ndev, "%s multicast address num: %d\n", __func__, mc_count);
 	if (mc_count > priv->max_mc_mac_addrs)
 		return;
@@ -883,15 +909,13 @@ static void sprdwl_set_multicast(struct net_device *ndev)
 	if ((ndev->flags & IFF_MULTICAST) && (mc_address_changed(ndev))) {
 		mac_addr = vif->mc_filter->mac_addr;
 		netdev_for_each_mc_addr(ha, ndev) {
+			if (!sprdwl_is_ip_mc_addr(ha->addr)) {
+				wl_ndev_log(L_DBG, ndev, "%s skip non-IP addr: %pM\n",
+					    __func__, ha->addr);
+				continue;
+			}
 			wl_ndev_log(L_DBG, ndev, "%s set mac: %pM\n", __func__,
 				    ha->addr);
-			if ((ha->addr[0] != 0x33 || ha->addr[1] != 0x33) &&
-			    (ha->addr[0] != 0x01 || ha->addr[1] != 0x00 ||
-			     ha->addr[2] != 0x5e || ha->addr[3] > 0x7f)) {
-				wl_ndev_log(L_INFO, ndev, "%s invalid addr\n",
-					    __func__);
-				return;
-			}
 			ether_addr_copy(mac_addr, ha->addr);
 			mac_addr += ETH_ALEN;
 		}
