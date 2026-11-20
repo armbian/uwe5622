@@ -1310,8 +1310,9 @@ int sprdwl_tx_msg_func(void *pdev, struct sprdwl_msg_buf *msg)
 	if (msg->msg_type != SPRDWL_TYPE_DATA)
 		sprdwl_queue_msg_buf(msg, msg->msglist);
 
-	prepare_addba(intf, dscr->sta_lut_index, (struct sk_buff *)msg->skb,
-			 peer_entry, tid);
+	if (peer_entry)
+		prepare_addba(intf, dscr->sta_lut_index,
+			      (struct sk_buff *)msg->skb, peer_entry, tid);
 
 	if (msg->msg_type == SPRDWL_TYPE_CMD)
 		tx_up(tx_msg);
