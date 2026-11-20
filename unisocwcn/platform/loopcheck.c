@@ -210,7 +210,12 @@ void stop_loopcheck(void)
 		return;
 	WCN_INFO("%s\n", __func__);
 	complete_all(&loopcheck.completion);
-	cancel_delayed_work_sync(&loopcheck.work);
+	/*
+	 * The work stops loopcheck itself when an ack is missing, directly
+	 * and through the CP2 reset; it must not wait for its own end.
+	 */
+	if (current_work() != &loopcheck.work.work)
+		cancel_delayed_work_sync(&loopcheck.work);
 }
 
 void complete_kernel_loopcheck(void)
