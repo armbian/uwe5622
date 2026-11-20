@@ -581,26 +581,21 @@ static int sprdwl_cfg80211_del_iface(struct wiphy *wiphy,
 				     struct wireless_dev *wdev)
 {
 	struct sprdwl_priv *priv = wiphy_priv(wiphy);
-	struct sprdwl_vif *vif = NULL, *tmp_vif = NULL;
+	struct sprdwl_vif *vif;
 
 	if (sprdwl_intf_is_exit(priv)) {
 		wiphy_err(wiphy, "%s driver removing!\n", __func__);
 		return 0;
 	}
 	spin_lock_bh(&priv->list_lock);
-	list_for_each_entry_safe(vif, tmp_vif, &priv->vif_list, vif_node) {
-		if (&vif->wdev == wdev)
-			break;
+	list_for_each_entry(vif, &priv->vif_list, vif_node) {
+		if (&vif->wdev == wdev) {
+			list_del(&vif->vif_node);
+			spin_unlock_bh(&priv->list_lock);
+			return sprdwl_del_iface(priv, vif);
+		}
 	}
 	spin_unlock_bh(&priv->list_lock);
-
-	if (vif != NULL) {
-		sprdwl_del_iface(priv, vif);
-
-		spin_lock_bh(&priv->list_lock);
-		list_del(&vif->vif_node);
-		spin_unlock_bh(&priv->list_lock);
-	}
 
 	return 0;
 }
