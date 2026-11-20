@@ -617,7 +617,7 @@ int sprdwl_cmd_send_recv(struct sprdwl_priv *priv,
 		}
 	} else {
 		wl_err("ctx_id:%d cmd: %s[%d] rsp timeout (mstime = %d), num=%d\n",
-		       ctx_id, cmd2str(cmd_id), cmd_id, le32_to_cpu(hdr->mstime),
+		       ctx_id, cmd2str(cmd_id), cmd_id, cmd->mstime,
 		       tx_msg->cmd_send);
 		if (cmd_id == WIFI_CMD_CLOSE) {
 			sprdwl_atcmd_assert(priv, ctx_id, cmd_id, CMD_RSP_TIMEOUT_ERROR);
