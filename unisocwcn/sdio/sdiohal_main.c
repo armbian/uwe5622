@@ -801,8 +801,10 @@ int sdiohal_writel(unsigned int system_addr, void *buf)
 		return -1;
 
 #ifdef CONFIG_ARCH_SUNXI
-	if (p_data->dt_rw_fail)
+	if (p_data->dt_rw_fail) {
+		sdiohal_card_unlock(p_data);
 		return -1;
+	}
 #endif
 
 	sdiohal_resume_check();
@@ -846,8 +848,10 @@ int sdiohal_readl(unsigned int system_addr, void *buf)
 		return -1;
 
 #ifdef CONFIG_ARCH_SUNXI
-	if (p_data->dt_rw_fail)
+	if (p_data->dt_rw_fail) {
+		sdiohal_card_unlock(p_data);
 		return -1;
+	}
 #endif
 
 	sdiohal_resume_check();
@@ -944,8 +948,10 @@ int sdiohal_dt_write(unsigned int system_addr,
 		return -1;
 
 #ifdef CONFIG_ARCH_SUNXI
-	if (p_data->dt_rw_fail)
+	if (p_data->dt_rw_fail) {
+		sdiohal_card_unlock(p_data);
 		return -1;
+	}
 #endif
 
 	sdiohal_resume_check();
@@ -1002,8 +1008,10 @@ int sdiohal_dt_read(unsigned int system_addr, void *buf,
 		return -1;
 
 #ifdef CONFIG_ARCH_SUNXI
-	if (p_data->dt_rw_fail)
+	if (p_data->dt_rw_fail) {
+		sdiohal_card_unlock(p_data);
 		return -1;
+	}
 #endif
 
 	sdiohal_resume_check();
