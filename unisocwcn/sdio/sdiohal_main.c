@@ -2168,8 +2168,8 @@ void sdiohal_remove_card(void)
 /*
  * Power-cycle the chip through the MMC core and enable function 1 again.
  * On boards with an mmc-pwrseq this pulses the chip's reset line, the same
- * as unbinding and rebinding the SDIO host. Only used during start-up,
- * before the SDIO interrupt is claimed and before firmware is loaded.
+ * as unbinding and rebinding the SDIO host. Only used while powering the
+ * chip up, before the SDIO interrupt is claimed and before firmware is loaded.
  */
 int sdiohal_hw_reset_card(void)
 {
@@ -2274,6 +2274,23 @@ int sdiohal_scan_card(void)
 		} else
 			pm_runtime_put_noidle(&func->dev);
 		/* calling rescan callback to inform download */
+		if (scan_card_notify != NULL)
+			scan_card_notify();
+		sdiohal_info("scan end!\n");
+		return 0;
+#endif
+
+#ifdef CONFIG_AW_BOARD
+		/*
+		 * sdiohal_remove_card() leaves the card and this driver in
+		 * place here, so registering the driver again below would
+		 * fail. Reset the chip instead and report the card as a
+		 * probe does.
+		 */
+		ret = sdiohal_hw_reset_card();
+		if (ret)
+			return ret;
+		atomic_set(&p_data->xmit_start, 1);
 		if (scan_card_notify != NULL)
 			scan_card_notify();
 		sdiohal_info("scan end!\n");
