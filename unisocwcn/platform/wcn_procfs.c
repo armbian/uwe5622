@@ -120,7 +120,7 @@ void mdbg_assert_interface(char *str)
 	marlin_reset_notify_call(MARLIN_CP2_STS_ASSERTED);
 	marlin_cp2_reset();
 	msleep(1000);
-	// marlin_reset_notify_call(MARLIN_CP2_STS_READY);
+	marlin_reset_notify_call(MARLIN_CP2_STS_READY);
 #endif
 
 }
@@ -180,7 +180,7 @@ int mdbg_assert_read(int channel, struct mbuf_t *head,
 		marlin_reset_notify_call(MARLIN_CP2_STS_ASSERTED);
 		marlin_cp2_reset();
 		msleep(1000);
-		// marlin_reset_notify_call(MARLIN_CP2_STS_READY);
+		marlin_reset_notify_call(MARLIN_CP2_STS_READY);
 #endif
 	return 0;
 }

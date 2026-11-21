@@ -569,8 +569,23 @@ static int wifi_exception_event(void)
 	return 0;
 }
 
+/* The reset tore the interface down; a new probe sets it up on the restarted chip. */
+static void sprdwl_reprobe(struct work_struct *work)
+{
+	/* device_reprobe() does not report a failed probe */
+	if (device_reprobe(sprdwl_dev) || !device_is_bound(sprdwl_dev))
+		wl_err("cp2 reset: probing again failed\n");
+}
+
+static DECLARE_WORK(sprdwl_reprobe_work, sprdwl_reprobe);
+
 static int wifi_reset_callback(struct notifier_block *nb, unsigned long event, void *v)
 {
+	if (event == MARLIN_CP2_STS_READY) {
+		schedule_work(&sprdwl_reprobe_work);
+		return NOTIFY_OK;
+	}
+
 	sprdwl_wifi_reset();
 	wifi_exception_event();
 	return NOTIFY_OK;
@@ -767,6 +782,9 @@ static int __init unisoc_wlan_init(void)
 static void __exit unisoc_wlan_exit(void)
 {
     platform_driver_unregister(&sprdwl_driver);
+#ifdef CP2_RESET_SUPPORT
+    cancel_work_sync(&sprdwl_reprobe_work);
+#endif
     platform_device_del(unisoc_pdev);
 }
 
