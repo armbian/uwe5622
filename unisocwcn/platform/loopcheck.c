@@ -26,7 +26,9 @@ static int at_cmd_send(char *buf, unsigned int len)
 {
 	unsigned char *send_buf = NULL;
 	struct mbuf_t *head, *tail;
+	int chn = mdbg_proc_ops[MDBG_AT_TX_OPS].channel;
 	int num = 1;
+	int ret;
 
 	WCN_DEBUG("%s len=%d\n", __func__, len);
 	if (unlikely(marlin_get_module_status() != true)) {
@@ -39,15 +41,20 @@ static int at_cmd_send(char *buf, unsigned int len)
 		return -ENOMEM;
 	memcpy(send_buf + PUB_HEAD_RSV, buf, len);
 
-	if (!sprdwcn_bus_list_alloc(mdbg_proc_ops[MDBG_AT_TX_OPS].channel,
-				    &head, &tail, &num)) {
-		head->buf = send_buf;
-		head->len = len;
-		head->next = NULL;
-		sprdwcn_bus_push_list(mdbg_proc_ops[MDBG_AT_TX_OPS].channel,
-				      head, tail, num);
+	if (sprdwcn_bus_list_alloc(chn, &head, &tail, &num)) {
+		kfree(send_buf);
+		return -ENOMEM;
 	}
-	return 0;
+	head->buf = send_buf;
+	head->len = len;
+	head->next = NULL;
+	ret = sprdwcn_bus_push_list(chn, head, tail, num);
+	if (ret) {
+		head->buf = NULL;
+		sprdwcn_bus_list_free(chn, head, tail, num);
+		kfree(send_buf);
+	}
+	return ret;
 }
 
 #ifdef CONFIG_WCN_LOOPCHECK
