@@ -1,6 +1,6 @@
 # ccflags-y += -DDEBUG
 # ccflags-y += -DKERNEL_VERSION_414
-ccflags-y += -I$(srctree)/drivers/net/wireless/uwe5622/unisocwcn/include
+ccflags-y += -I$(src)/../unisocwcn/include
 ccflags-y += -DOTT_UWE
 ccflags-y += -DWOBLE_FUN
 

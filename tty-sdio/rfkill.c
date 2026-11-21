@@ -15,6 +15,7 @@
 #include <linux/delay.h>
 #include <linux/device.h>
 #include <linux/module.h>
+#include <linux/mutex.h>
 #include <linux/platform_device.h>
 #include <linux/rfkill.h>
 #include <linux/gpio.h>
@@ -35,39 +36,77 @@ static struct rfkill *bt_rfk;
 static struct device *bt_dev;
 static const char bt_name[] = "bluetooth";
 
-static int bluetooth_set_power(void *data, bool blocked)
+/* Serialises the rfkill callback with the restart after a CP2 reset. */
+static DEFINE_MUTEX(bt_power_lock);
+static bool bt_powered;
+
+static int bluetooth_power_on(void)
 {
 	int ret;
 
+	ret = start_marlin(MARLIN_BLUETOOTH);
+	if (ret) {
+		pr_err("%s: start_marlin failed: %d\n", __func__, ret);
+		return ret;
+	}
+	/*
+	 * The core is powered but unconfigured; send PSKEY/RF/enable
+	 * so that a plain HCI line discipline can drive it. On failure
+	 * power it down again and report the error, so the rfkill
+	 * switch stays blocked and userspace can retry.
+	 */
+	ret = sprd_bt_init(bt_dev);
+	if (ret) {
+		pr_err("%s: Bluetooth vendor init failed: %d\n",
+			__func__, ret);
+		stop_marlin(MARLIN_BLUETOOTH);
+	}
+	return ret;
+}
+
+static int bluetooth_set_power(void *data, bool blocked)
+{
+	int ret = 0;
+
 	pr_info("%s: start_block=%d\n", __func__, blocked);
+	mutex_lock(&bt_power_lock);
 	if (!blocked) {
-		ret = start_marlin(MARLIN_BLUETOOTH);
-		if (ret) {
-			pr_err("%s: start_marlin failed: %d\n", __func__, ret);
-			return ret;
-		}
-		/*
-		 * The core is powered but unconfigured; send PSKEY/RF/enable
-		 * so that a plain HCI line discipline can drive it. On failure
-		 * power it down again and report the error, so the rfkill
-		 * switch stays blocked and userspace can retry.
-		 */
-		ret = sprd_bt_init(bt_dev);
-		if (ret) {
-			pr_err("%s: Bluetooth vendor init failed: %d\n",
-				__func__, ret);
-			stop_marlin(MARLIN_BLUETOOTH);
-			return ret;
-		}
+		ret = bluetooth_power_on();
+		bt_powered = !ret;
 	} else {
+		bt_powered = false;
 		sprd_bt_init_invalidate();
 		ret = stop_marlin(MARLIN_BLUETOOTH);
 		if (ret)
 			pr_err("%s: stop_marlin failed: %d\n", __func__, ret);
+		ret = 0;
 	}
+	mutex_unlock(&bt_power_lock);
+	if (ret)
+		return ret;
 
 	pr_info("%s: end_block=%d\n", __func__, blocked);
 	return 0;
+}
+
+/*
+ * After a CP2 reset the core is off: power and configure it again if it was
+ * on. Returns 1 if it was restarted, 0 if it is off, or an error.
+ */
+int rfkill_bluetooth_restart(void)
+{
+	int ret = 0;
+
+	mutex_lock(&bt_power_lock);
+	if (bt_powered) {
+		ret = bluetooth_power_on();
+		if (ret)
+			bt_powered = false;
+		else
+			ret = 1;
+	}
+	mutex_unlock(&bt_power_lock);
+	return ret;
 }
 
 static struct rfkill_ops rfkill_bluetooth_ops = {
@@ -109,6 +148,9 @@ int rfkill_bluetooth_remove(struct platform_device *dev)
 	pr_info("-->%s\n", __func__);
 	if (bt_rfk) {
 		rfkill_unregister(bt_rfk);
+		mutex_lock(&bt_power_lock);
+		bt_powered = false;
+		mutex_unlock(&bt_power_lock);
 		/*
 		 * Unregistering does not call set_block, so power Bluetooth
 		 * down here. Otherwise its power bit stays set and the chip

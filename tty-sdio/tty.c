@@ -646,37 +646,36 @@ struct mchn_ops_t bt_tx_ops = {
 #endif
 };
 
+static void mtty_bt_restart(struct work_struct *work)
+{
+	/* HCI Hardware Error event: the host stack resets the controller */
+	static const unsigned char hw_error[] = {0x04, 0x10, 0x01, 0x00};
+	int ret;
+
+	ret = rfkill_bluetooth_restart();
+	if (ret <= 0) {
+		if (ret)
+			pr_err("%s: Bluetooth restart failed: %d\n", __func__, ret);
+		return;
+	}
+	pr_info("%s: Bluetooth restarted\n", __func__);
+	if (mtty_dev && atomic_read(&mtty_dev->state) == MTTY_STATE_OPEN &&
+	    tty_insert_flip_string(mtty_dev->port, hw_error, sizeof(hw_error)))
+		tty_flip_buffer_push(mtty_dev->port);
+}
+
+static DECLARE_WORK(mtty_bt_restart_work, mtty_bt_restart);
+
 static int bluetooth_reset(struct notifier_block *this, unsigned long ev, void *ptr)
 {
-#define RESET_BUFSIZE 5
-	int ret = 0;
-	int block_size = RESET_BUFSIZE;
-	unsigned char reset_buf[RESET_BUFSIZE] = {0x04, 0xff, 0x02, 0x57, 0xa5};
-
-	if (!ev) {
+	if (ev == MARLIN_CP2_STS_ASSERTED) {
 		pr_info("%s:reset callback coming\n", __func__);
-		/* the firmware restarted: PSKEY/RF must be sent again */
+		/* the firmware restarts: PSKEY/RF must be sent again */
 		sprd_bt_init_invalidate();
-		if (mtty_dev != NULL) {
-			if (!work_pending(&mtty_dev->bt_rx_work)) {
-				pr_info("%s tty_insert_flip_string", __func__);
-				while (ret < block_size) {
-					pr_info("%s before tty_insert_flip_string ret: %d, len: %d\n",
-							__func__, ret, RESET_BUFSIZE);
-					ret = tty_insert_flip_string(mtty_dev->port,
-							(unsigned char *)reset_buf,
-							RESET_BUFSIZE);   // -BT_SDIO_HEAD_LEN
-					pr_info("%s ret: %d, len: %d\n", __func__, ret, RESET_BUFSIZE);
-					if (ret)
-						tty_flip_buffer_push(mtty_dev->port);
-					block_size = block_size - ret;
-					ret = 0;
-				}
-			}
-		}
-		ret = NOTIFY_DONE;
+	} else if (ev == MARLIN_CP2_STS_READY) {
+		schedule_work(&mtty_bt_restart_work);
 	}
-	return ret;
+	return NOTIFY_DONE;
 }
 
 static struct notifier_block bluetooth_reset_block = {
@@ -847,6 +846,8 @@ static int mtty_remove(struct platform_device *pdev)
 {
 	struct mtty_device *mtty = platform_get_drvdata(pdev);
 
+	marlin_reset_callback_unregister(MARLIN_BLUETOOTH, &bluetooth_reset_block);
+	cancel_work_sync(&mtty_bt_restart_work);
 	/* Unregister first: its set_block callback must not run during teardown */
 	rfkill_bluetooth_remove(pdev);
 	mtty_tty_driver_exit(mtty);

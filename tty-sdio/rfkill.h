@@ -21,5 +21,6 @@
 
 int rfkill_bluetooth_init(struct platform_device *pdev);
 int rfkill_bluetooth_remove(struct platform_device *pdev);
+int rfkill_bluetooth_restart(void);
 
 #endif
