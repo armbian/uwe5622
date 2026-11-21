@@ -1117,6 +1117,8 @@ void sdiohal_set_carddump_status(unsigned int flag)
 			(p_data->irq_num > 0))
 			disable_irq(p_data->irq_num);
 		sdiohal_info("disable rx int for dump\n");
+	} else {
+		p_data->dt_rw_fail = 0;
 	}
 
 #if SDIO_DUMP_CHANNEL_DATA

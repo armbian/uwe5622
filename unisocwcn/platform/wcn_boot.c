@@ -2962,6 +2962,8 @@ void marlin_cp2_reset(void)
 	marlin_dev->first_power_on_flag = 0;
 	marlin_set_power(MARLIN_WIFI, false);
 	marlin_set_power(MARLIN_BLUETOOTH, false);
+	/* A bus error refuses every power-up until this is cleared */
+	sprdwcn_bus_set_carddump_status(false);
 }
 EXPORT_SYMBOL_GPL(marlin_cp2_reset);
 
