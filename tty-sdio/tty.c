@@ -462,6 +462,7 @@ static int mtty_write(struct tty_struct *tty,
 		kfree(tx_head->buf);
 		tx_head->buf = NULL;
 		sprdwcn_bus_list_free(BT_TX_CHANNEL, tx_head, tx_tail, num);
+		up(&sem_id);
 		return -EBUSY;
 	}
 
@@ -815,6 +816,7 @@ int marlin_sdio_write(const unsigned char *buf, int count)
 		kfree(tx_head->buf);
 		tx_head->buf = NULL;
 		sprdwcn_bus_list_free(BT_TX_CHANNEL, tx_head, tx_tail, num);
+		up(&sem_id);
 		return -EBUSY;
 	}
 
