@@ -1364,10 +1364,10 @@ static int sprdwl_cfg80211_get_station(struct wiphy *wiphy,
 		return 0;
 	}
 
-	sinfo->filled |= BIT(NL80211_STA_INFO_TX_BYTES) |
-			 BIT(NL80211_STA_INFO_TX_PACKETS) |
-			 BIT(NL80211_STA_INFO_RX_BYTES) |
-			 BIT(NL80211_STA_INFO_RX_PACKETS);
+	sinfo->filled |= BIT_ULL(NL80211_STA_INFO_TX_BYTES64) |
+			 BIT_ULL(NL80211_STA_INFO_TX_PACKETS) |
+			 BIT_ULL(NL80211_STA_INFO_RX_BYTES64) |
+			 BIT_ULL(NL80211_STA_INFO_RX_PACKETS);
 	sinfo->tx_bytes = wdev->netdev->stats.tx_bytes;
 	sinfo->tx_packets = wdev->netdev->stats.tx_packets;
 	sinfo->rx_bytes = wdev->netdev->stats.rx_bytes;
@@ -1460,10 +1460,10 @@ static int sprdwl_cfg80211_get_station(struct wiphy *wiphy,
 	struct sprdwl_rate_info *rate;
 	int ret;
 
-	sinfo->filled |= BIT(NL80211_STA_INFO_TX_BYTES) |
-			 BIT(NL80211_STA_INFO_TX_PACKETS) |
-			 BIT(NL80211_STA_INFO_RX_BYTES) |
-			 BIT(NL80211_STA_INFO_RX_PACKETS);
+	sinfo->filled |= BIT_ULL(NL80211_STA_INFO_TX_BYTES64) |
+			 BIT_ULL(NL80211_STA_INFO_TX_PACKETS) |
+			 BIT_ULL(NL80211_STA_INFO_RX_BYTES64) |
+			 BIT_ULL(NL80211_STA_INFO_RX_PACKETS);
 	sinfo->tx_bytes = ndev->stats.tx_bytes;
 	sinfo->tx_packets = ndev->stats.tx_packets;
 	sinfo->rx_bytes = ndev->stats.rx_bytes;
