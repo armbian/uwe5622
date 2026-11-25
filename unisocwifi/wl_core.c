@@ -572,8 +572,12 @@ static int wifi_exception_event(void)
 /* The reset tore the interface down; a new probe sets it up on the restarted chip. */
 static void sprdwl_reprobe(struct work_struct *work)
 {
-	/* device_reprobe() does not report a failed probe */
+	/* device_reprobe() does not report a failed probe. device_is_bound() is exported since Linux 6.12. */
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 12, 0)
 	if (device_reprobe(sprdwl_dev) || !device_is_bound(sprdwl_dev))
+#else
+	if (device_reprobe(sprdwl_dev) || !sprdwl_dev->driver)
+#endif
 		wl_err("cp2 reset: probing again failed\n");
 }
 
